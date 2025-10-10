@@ -1,0 +1,72 @@
+body {
+    font-family: 'Segoe UI', 'Meiryo', sans-serif;
+    background: #f8f8fa;
+    color: #222;
+    margin: 0;
+    padding: 2em;
+}
+
+h2 {
+    color: #2a4d7a;
+}
+
+form {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px #0001;
+    padding: 2em;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+input[type="range"] {
+    width: 200px;
+}
+
+input[readonly] {
+    background: #eee;
+}
+
+label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5em;
+    gap: 0.5em;
+}
+
+label i {
+    min-width: 2.2em;
+    text-align: center;
+}
+
+label span {
+    min-width: 7em;
+    display: inline-block;
+}
+
+label input[type="range"],
+label input[type="text"],
+label input[type="number"] {
+    flex: 1 1 200px;
+    margin: 0 0.5em;
+}
+
+label output {
+    min-width: 4em;
+    text-align: right;
+    margin-left: 0.5em;
+}
+
+hr {
+    margin: 1em 0;
+}
+
+output {
+    margin-left: 0.5em;
+    font-weight: bold;
+    color: #1a7a2a;
+}
+
+button {
+    margin-right: 1em;
+}
