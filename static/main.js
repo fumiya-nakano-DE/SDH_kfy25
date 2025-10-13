@@ -1,8 +1,21 @@
+function formatOutputWithCommas(outputElement) {
+    const value = parseFloat(outputElement.textContent);
+    if (!isNaN(value)) {
+        outputElement.textContent = value.toLocaleString();
+    }
+}
+
 function updateParam(slider) {
     const param = slider.dataset.param;
     const outputId = slider.dataset.output;
     let value = slider.type === "checkbox" ? (slider.checked ? "true" : "false") : slider.value;
-    if (outputId) document.getElementById(outputId).value = value;
+    if (outputId) {
+        const outputElement = document.getElementById(outputId);
+        if (outputElement) {
+            outputElement.textContent = value;
+            formatOutputWithCommas(outputElement); // Format the output with commas
+        }
+    }
     fetch("/set_param", {
         method: 'POST',
         body: new URLSearchParams({ [param]: value })
@@ -34,7 +47,7 @@ function sendSetNeutral() {
         .then(data => {
             setFormEnabled(true);
             if (data.result === "OK") {
-                alert("SetNeutral finished successfully");
+                //alert("SetNeutral finished successfully");
                 getTargetPosition();
             } else {
                 alert("SetNeutral command failed: " + (data.error || ""));
@@ -63,7 +76,7 @@ function sendInit() {
         .then(data => {
             setFormEnabled(true);
             if (data.result === "OK") {
-                alert("Init finished successfully");
+                alert("Init finished successfully" + (data.info ? (" (" + data.info + ")") : ""));
                 getTargetPosition();
             } else {
                 alert("Init failed: " + (data.error || ""));
@@ -129,6 +142,9 @@ function sendHoming() {
 }
 
 function getTargetPosition() {
+    const boardsCheckbox = document.getElementById('chk_boards');
+    if (boardsCheckbox && !boardsCheckbox.checked) return;
+
     const motorID = document.getElementById('motor-id-input').value;
     fetch(`/get_target_position?motorID=${motorID}`)
         .then(res => res.json())
@@ -190,9 +206,31 @@ function changeMode(select) {
         });
 }
 
+function sendHalt() {
+    fetch("/halt", { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            setFormEnabled(true);
+            if (data.result === "OK") {
+                alert(">>>Emergency Stop Activated<<<");
+            } else {
+                alert("Halt command failed: " + (data.error || ""));
+            }
+            setFormEnabled(false);
+        });
+}
+
+// Format all outputs with commas on page load
 window.addEventListener('DOMContentLoaded', function () {
+
+    window.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            sendHalt();
+        }
+    });
+
     const motorIdInput = document.getElementById('motor-id-input');
     if (motorIdInput) motorIdInput.addEventListener('change', getTargetPosition);
 
-    //setInterval(() => { location.reload(); }, 5000);
+    document.querySelectorAll('output').forEach(formatOutputWithCommas);
 });

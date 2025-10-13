@@ -74,6 +74,7 @@ def wait_for_homing_complete(motor_id, timeout=12.0, poll_interval=0.05):
 
 
 def wait_for_booted(booted_ports, expected_ports, wait_time=10.0, steps=50):
+
     elapsed = 0
     for _ in range(steps + 1):
         if len(booted_ports) >= expected_ports:
@@ -115,6 +116,15 @@ def index():
     return render_template("index.html", **render_params, running=running)
 
 
+@app.route("/halt", methods=["POST", "GET"])
+def halt():
+    clients = get_clients()
+    for client in clients:
+        client.send_message("/hardHiZ", [255])
+    stop()
+    return jsonify(result="OK")
+
+
 def stop():
     global stop_event, osc_thread
     stop_event.set()
@@ -132,7 +142,7 @@ def stop_endpoint():
 @app.route("/setNeutral", methods=["POST", "GET"])
 def setNeutral():
     target_vals = [int(params.get("STROKE_OFFSET", 50000))] * params["NUM_SERVOS"]
-    alpha = float(params.get("ALPHA", 0.2)) * 0.2
+    alpha = float(params.get("ALPHA", 0.2)) * 0.5
     interval = 1.0 / float(params["RATE_fps"])
     while True:
         filt_vals = filter_vals(target_vals, alpha)
@@ -271,6 +281,7 @@ def set_PID():
 
 
 def init(enable=True):
+
     clients = get_clients()
     booted_ports = set()
 
@@ -296,7 +307,7 @@ def init(enable=True):
                 # "/setKval", [255, 60, 119, 119, 119] #SM42BYG011
                 # "/setKval", [255, 60, 85, 85, 85] #42HSC1409
                 "/setKval",
-                #[255, 25, 75, 75, 75],  # SS2421 12V
+                # [255, 25, 75, 75, 75],  # SS2421 12V
                 [255, 10, 25, 25, 25],  # SS2421 24V-Low
             )  # (int)motorID (int)holdKVAL (int)runKVAL (int)accKVAL (int)setDecKVAL
             # client.send_message("/setGoUntilTimeout", [255, 10000])
@@ -310,12 +321,15 @@ def init(enable=True):
     for client in clients:
         client.send_message("/enableServoMode", [255, enable])
         if not enable:
-            client.send_message("/hardHiZ", 255)
+            client.send_message("/softHiZ", 255)
     set_PID()
 
 
 @app.route("/init", methods=["POST"])
 def init_endpoint():
+    if params.get("SEND_CLIENTS", True) is False:
+        print("SEND_CLIENTS is False, skipping boards init.")
+        return jsonify(result="OK", info="SEND_CLIENTS is False, skipping boards init.")
     try:
         start_osc_receiver_thread()
         init()

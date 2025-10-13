@@ -28,15 +28,15 @@
             <span>Targets</span>
             <span style="display: flex; align-items: center; gap: 1em;">
                 <label style="display: flex; align-items: center; margin: 0;">
-                    <input type="checkbox" data-param="SEND_CLIENTS" {% if SEND_CLIENTS %}checked{% endif %}
-                        onchange="updateParam(this)">
+                    <input id="chk_boards" type="checkbox" data-param="SEND_CLIENTS" {% if SEND_CLIENTS %}checked{%
+                        endif %} onchange="updateParam(this)">
                     <span style="min-width:4em;">boards</span>
                 </label>
             </span>
             <span style="display: flex; align-items: center; gap: 1em;">
                 <label style="display: flex; align-items: center; margin: 0;">
-                    <input type="checkbox" data-param="SEND_CLIENT_GH" {% if SEND_CLIENT_GH %}checked{% endif %}
-                        onchange="updateParam(this)">
+                    <input id="chk_gh" type="checkbox" data-param="SEND_CLIENT_GH" {% if SEND_CLIENT_GH %}checked{%
+                        endif %} onchange="updateParam(this)">
                     <span style="min-width:4em;">gh</span>
                 </label>
             </span>
@@ -59,6 +59,21 @@
                 data-param="STROKE_OFFSET" data-endpoint="/set_stroke_offset" data-output="stroke_offset_out"
                 oninput="updateParam(this)">
             <output id="stroke_offset_out">{{ STROKE_OFFSET }}</output>
+        </label>
+        <label>
+            <i class="fa-solid fa-road-barrier"></i>
+            <span>LIMIT_ABSOLUTE</span>
+            <input type="range" min="0" max="200000" step="100" value="{{ LIMIT_ABSOLUTE }}" data-param="LIMIT_ABSOLUTE"
+                data-endpoint="/set_limit_absolute" data-output="limit_absolute_out" oninput="updateParam(this)">
+            <output id="limit_absolute_out">{{ LIMIT_ABSOLUTE }}</output>
+        </label>
+        <label>
+            <i class="fa-solid fa-arrows-left-right"></i>
+            <span>LIMIT_RELATIONAL</span>
+            <input type="range" min="0" max="200000" step="100" value="{{ LIMIT_RELATIONAL }}"
+                data-param="LIMIT_RELATIONAL" data-endpoint="/set_limit_relational" data-output="limit_relational_out"
+                oninput="updateParam(this)">
+            <output id="limit_relational_out">{{ LIMIT_RELATIONAL }}</output>
         </label>
         <label>
             <i class="fas fa-filter"></i>
@@ -226,6 +241,10 @@
             </button>
         </div>
     </form>
+    <button type="button" id="btnHalt" onclick="sendHalt()" class="floating-button"
+        title="Emergency Stop (also stops by ESC key)">
+        <i class="fa-solid fa-ban"></i>
+    </button>
     <script src="/static/main.js"></script>
 </body>
 

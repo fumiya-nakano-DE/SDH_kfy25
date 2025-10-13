@@ -1,5 +1,5 @@
 {
-  "MODE": "101",
+  "MODE": "103",
   "MODES": {
     "101": {
       "NAME": "Simple sin",
@@ -124,7 +124,7 @@
   "PORT": 50000,
   "NUM_SERVOS": 32,
   "RATE_fps": 60,
-  "ALPHA": 0.2,
+  "ALPHA": 0.3,
   "HOSTS": [
     "10.0.0.100",
     "10.0.0.101",
@@ -137,11 +137,13 @@
   "Kd": 0.01,
   "STROKE_OFFSET": 50000,
   "SEND_CLIENTS": false,
-  "SEND_CLIENT_GH": false,
+  "SEND_CLIENT_GH": true,
   "OSC_RECV_PORTS": [
     50100,
     50101,
     50102,
     50103
-  ]
+  ],
+  "LIMIT_ABSOLUTE": 120000,
+  "LIMIT_RELATIONAL": 173200
 }
