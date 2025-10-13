@@ -1,7 +1,7 @@
 from pythonosc.udp_client import SimpleUDPClient
 from osc_params import params, VALS_PER_HOST, NUM_SERVOS
 from osc_modes import make_frame
-import sys, time
+import sys, time, math
 
 prev_vals = None
 
@@ -48,10 +48,44 @@ def send_all_setTargetPositionList(vals):
 
 
 def filter_vals(raw_vals, alpha):
+    vals = raw_vals.copy()
+
     prev = get_prev_vals()
     if prev is None:
-        return raw_vals
-    return [int(p + alpha * (c - p)) for p, c in zip(prev, raw_vals)]
+        vals = raw_vals
+    else:
+        vals = [int(p + alpha * (c - p)) for p, c in zip(prev, raw_vals)]
+
+    limited_absolute = False
+    limit_absolute = params.get("LIMIT_ABSOLUTE")
+    for i in range(len(vals)):
+        if vals[i] > limit_absolute:
+            vals[i] = limit_absolute
+            limited_absolute = True
+        elif vals[i] < 0:
+            vals[i] = 0
+            limited_absolute = True
+
+    limited_relational = False
+    limit_relational = params.get("LIMIT_RELATIONAL")
+    valsLPF = vals.copy()
+
+    def solve_relational_limit(a, c):
+        return 0.5 * (math.sqrt(4 * c * c - 3 * a * a) - a)
+
+    for i in range(1, len(vals) - 1):
+        b_1 = solve_relational_limit(valsLPF[i - 1], limit_relational)
+        b_2 = solve_relational_limit(valsLPF[i + 1], limit_relational)
+        if b_1 - valsLPF[i] < 0 or b_2 - valsLPF[i] < 0:
+            vals[i] = 0.5 * min(b_1 + valsLPF[i], b_2 + valsLPF[i])
+            limited_relational = True
+
+    if limited_relational or limited_absolute:
+        sys.stderr.write(
+            f"\n【LIMITED】: {'ABS ' if limited_absolute else ''}{'REL' if limited_relational else ''}\n"
+        )
+
+    return vals
 
 
 def osc_sender(params, stop_event):
@@ -61,15 +95,21 @@ def osc_sender(params, stop_event):
     start = time.time()
     frame = 0
     last_msg_len = 0
+    mode = params.get("MODE")
     while not stop_event.is_set():
         now = time.time()
+        if mode != params.get("MODE"):
+            mode = params.get("MODE")
+            sys.stderr.write(f"\n=== MODE: {mode} ===\n")
+            start = now
+            frame = 0
+
         raw_vals = make_frame(now - start, NUM_SERVOS, params)
         alpha = float(params.get("ALPHA", 0.2))
         prev = get_prev_vals()
         if prev is None:
-            filt_vals = raw_vals
-        else:
-            filt_vals = filter_vals(raw_vals, alpha)
+            set_prev_vals(raw_vals)
+        filt_vals = filter_vals(raw_vals, alpha)
         set_prev_vals(filt_vals)
         sent_boards, sent_gh = send_all_setTargetPositionList(filt_vals)
         msg = (
