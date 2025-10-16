@@ -1,24 +1,27 @@
 import math
 import numpy as np
-from osc_params import params
+from osc_params import get_params_full, get_params_mode
 
 
 # -------------------------
 # Amplitude modulation
 # -------------------------
-def solid(t, num_servos, mode_params):
+def solid(t, num_servos):
     return np.ones(num_servos)
 
 
-def cone(t, num_servos, mode_params):
+def cone(t, num_servos):
     idx = np.arange(num_servos, dtype=float)
     return (num_servos - idx) / num_servos
 
 
-def amp_sin(t, num_servos, mode_params):
-    freq = mode_params.get("AMP_FREQ", 0.2)
+def amp_sin(t, num_servos):
+    freq = get_params_mode().get("AMP_FREQ", 0.2)
     phase_shift = (
-        (2 * math.pi) / num_servos / max(mode_params.get("AMP_PARAM_A", 0.2), 1e-6) / 2
+        (2 * math.pi)
+        / num_servos
+        / max(get_params_mode().get("AMP_PARAM_A", 0.2), 1e-6)
+        / 2
     )
     return np.array(
         [
@@ -29,46 +32,68 @@ def amp_sin(t, num_servos, mode_params):
     )
 
 
-def amplitude_modulation(t, num_servos, mode_params):
-    amp_func = globals().get(str(mode_params.get("AMP_MODE")), solid)
-    return amp_func(t, num_servos, mode_params) * float(
-        mode_params.get("STROKE_LENGTH", 50000)
+def amplitude_modulation(t, num_servos):
+    amp_func = globals().get(str(get_params_mode().get("AMP_MODE")), solid)
+    return amp_func(t, num_servos) * float(
+        get_params_mode().get("STROKE_LENGTH", 50000)
     )
+
+
+def amp_emerging(t, num_servos):
+    damping = float(get_params_mode().get("AMP_PARAM_A", 0.1))
+    rate = max(damping, 1e-6)
+    vals = [1.0 - math.exp(-rate * t)] * num_servos
+    return np.array(vals, dtype=float)
+
+
+def amp_locational(t, num_servos):
+    amp_param_a = float(get_params_mode().get("AMP_PARAM_A", 0.1))
+    distances, dot_products = location_distance(0, num_servos)
+    # rate = max(distances, [1e-6] * num_servos)
+    # exponential decay: close to 1 at distance=0, ->0 as distance grows
+    scale = max(amp_param_a, 1e-6)
+    vals = np.exp(-scale * distances)
+    return np.array(vals, dtype=float)
 
 
 # -------------------------
 # Helpers
 # -------------------------
-def base_freq(mode_params):
-    return float(mode_params.get("BASE_FREQ", 1.0))
+def base_freq():
+    return float(get_params_mode().get("BASE_FREQ", 1.0))
 
 
-def cycle_from_params(mode_params):
-    return 1.0 / max(base_freq(mode_params), 1e-6)
+def cycle_from_params():
+    return 1.0 / max(base_freq(), 1e-6)
 
 
-def duty_from_param_a(mode_params, cycle):
-    return float(mode_params.get("PARAM_A", 0.15)) * cycle
+def duty_from_param_a(cycle):
+    return float(get_params_mode().get("PARAM_A", 0.15)) * cycle
 
 
-def rate_from_param_b(mode_params, duty):
-    return duty / max(float(mode_params.get("PARAM_B", 1e-6)), 1e-6)
+def rate_from_param_b(duty):
+    return duty / max(float(get_params_mode().get("PARAM_B", 1e-6)), 1e-6)
 
 
 # -------------------------
 # Phase
 # -------------------------
-def phase(i, num_servos, mode_params):
-    return (i / num_servos) * math.pi * float(mode_params.get("PHASE_RATE", 0.0)) * -1.0
+def phase(i, num_servos):
+    return (
+        (i / num_servos)
+        * math.pi
+        * float(get_params_mode().get("PHASE_RATE", 0.0))
+        * -1.0
+    )
 
 
 def azimuth_phase(i):
     return (i % 3) / 3 * math.pi * 2
 
 
-def locational_phase(i, num_servos, mode_params):
-    r = float(mode_params.get("HELIX_RADIUS", 1.0))
-    p = float(mode_params.get("HELIX_PITCH", 1.0))
+def location_distance(i, num_servos):
+    r = float(get_params_mode().get("HELIX_RADIUS", 1.0))
+    p = float(get_params_mode().get("HELIX_PITCH", 1.0))
     num_turns = num_servos / 3.0
     coords = []
     for idx in range(num_servos):
@@ -77,7 +102,10 @@ def locational_phase(i, num_servos, mode_params):
         x = r * math.cos(theta)
         y = r * math.sin(theta)
         coords.append([x, y, z])
-    origin = np.array([1.1, 0.0, 7.0])
+    degree = 0
+    origin = np.array(
+        [math.cos(degree * math.pi / 180), math.sin(degree * math.pi / 180), 7.0]
+    )
     distances = [np.linalg.norm(np.array(coord) - origin) for coord in coords]
     origin_vec = origin / np.linalg.norm(origin)
     dot_products = [
@@ -102,26 +130,23 @@ def window_rectangular(t_rel, duty):
 # -------------------------
 # Core wave
 # -------------------------
-def azimuth_core(i, num_servos, mode_params, t, rate):
-    return math.sin(
-        2 * math.pi * rate * t + azimuth_phase(i) + phase(i, num_servos, mode_params)
-    )
+def azimuth_core(i, num_servos, t, rate):
+    return math.sin(2 * math.pi * rate * t + azimuth_phase(i) + phase(i, num_servos))
 
 
-def azimuth_base(t, num_servos, mode_params, window_func=None):
-    cycle = cycle_from_params(mode_params)
+def azimuth_base(t, num_servos, window_func=None):
+    cycle = cycle_from_params()
     t_mod = t % cycle
     window = 1.0
     if window_func is not None:
-        duty = duty_from_param_a(mode_params, cycle)
+        duty = duty_from_param_a(cycle)
         window = window_func(t_mod, duty) if t_mod <= duty else 0.0
-        rate = rate_from_param_b(mode_params, duty)
+        rate = rate_from_param_b(duty)
     else:
-        rate = base_freq(mode_params)
+        rate = base_freq()
 
     vals = [
-        azimuth_core(i, num_servos, mode_params, t_mod, rate) * window
-        for i in range(num_servos)
+        azimuth_core(i, num_servos, t_mod, rate) * window for i in range(num_servos)
     ]
     return np.array(vals, dtype=float)
 
@@ -129,31 +154,31 @@ def azimuth_base(t, num_servos, mode_params, window_func=None):
 # -------------------------
 # Public mode functions
 # -------------------------
-def sin(t, num_servos, mode_params):
-    freq = base_freq(mode_params)
+def sin(t, num_servos):
+    freq = base_freq()
     vals = [
-        math.sin(2 * math.pi * freq * t + phase(i, num_servos, mode_params))
+        math.sin(2 * math.pi * freq * t + phase(i, num_servos))
         for i in range(num_servos)
     ]
     return np.array(vals, dtype=float)
 
 
-def azimuth(t, num_servos, mode_params):
-    return azimuth_base(t, num_servos, mode_params, window_func=None)
+def azimuth(t, num_servos):
+    return azimuth_base(t, num_servos, window_func=None)
 
 
-def azimuth_window_gaussian(t, num_servos, mode_params):
-    return azimuth_base(t, num_servos, mode_params, window_gaussian)
+def azimuth_window_gaussian(t, num_servos):
+    return azimuth_base(t, num_servos, window_gaussian)
 
 
-def azimuth_window_rectangular(t, num_servos, mode_params):
-    return azimuth_base(t, num_servos, mode_params, window_rectangular)
+def azimuth_window_rectangular(t, num_servos):
+    return azimuth_base(t, num_servos, window_rectangular)
 
 
-def soliton(t, num_servos, mode_params):
-    period = cycle_from_params(mode_params)
-    width = max(float(mode_params.get("PARAM_A", 0.15)), 1e-6)  # 0..1 of cycle
-    speed = float(mode_params.get("PARAM_B", 1.0))  # 伝播速度スケール
+def soliton(t, num_servos):
+    period = cycle_from_params()
+    width = max(float(get_params_mode().get("PARAM_A", 0.15)), 1e-6)  # 0..1 of cycle
+    speed = float(get_params_mode().get("PARAM_B", 1.0))  # 伝播速度スケール
     vals = []
     for i in range(num_servos):
         phase_pos = ((t / period) - (i / num_servos) * speed) % 1.0
@@ -162,29 +187,22 @@ def soliton(t, num_servos, mode_params):
     return np.array(vals, dtype=float)
 
 
-def azimuth_sine(t, num_servos, mode_params):
-    return azimuth_base(t, num_servos, mode_params) * amp_sin(
-        t, num_servos, mode_params
-    )
-
-
-def damped_oscillation(t, num_servos, mode_params):
-    freq = base_freq(mode_params)
-    damping = float(mode_params.get("PARAM_A", 0.1)) * 10  # 減衰係数
+def damped_oscillation(t, num_servos):
+    freq = base_freq()
+    damping = float(get_params_mode().get("PARAM_A", 0.1)) * 10  # 減衰係数
     vals = [
-        math.exp(-damping * t)
-        * math.sin(2 * math.pi * freq * t + phase(i, num_servos, mode_params))
+        math.exp(-damping * t) * math.sin(2 * math.pi * freq * t + phase(i, num_servos))
         for i in range(num_servos)
     ]
     return np.array(vals, dtype=float)
 
 
-def damped_oscillation_locational(t, num_servos, mode_params):
-    freq = base_freq(mode_params)
-    damping = float(mode_params.get("PARAM_A", 0.1)) * 10
-    convey = float(mode_params.get("AMP_PARAM_A", 0.1)) * 10
+def damped_oscillation_locational(t, num_servos):
+    freq = base_freq()
+    damping = float(get_params_mode().get("PARAM_A", 0.1)) * 10
+    convey = float(get_params_mode().get("AMP_PARAM_A", 0.1)) * 10
     vals = [0] * num_servos
-    distances, dot_products = locational_phase(0, num_servos, mode_params)
+    distances, dot_products = location_distance(0, num_servos)
     for i in range(num_servos):
         t_i = t - distances[i] / (2 * math.pi * freq) * convey
         if t_i < 0:
@@ -194,12 +212,12 @@ def damped_oscillation_locational(t, num_servos, mode_params):
     return np.array(vals, dtype=float)
 
 
-def damped_oscillation_displace(t, num_servos, mode_params):
-    freq = base_freq(mode_params)
-    damping = float(mode_params.get("PARAM_A", 0.1)) * 10
-    convey = float(mode_params.get("AMP_PARAM_A", 0.1)) * 10
+def damped_oscillation_displace(t, num_servos):
+    freq = base_freq()
+    damping = float(get_params_mode().get("PARAM_A", 0.1)) * 10
+    convey = float(get_params_mode().get("AMP_PARAM_A", 0.1)) * 10
     vals = [0] * num_servos
-    distances, dot_products = locational_phase(0, num_servos, mode_params)
+    distances, dot_products = location_distance(0, num_servos)
     for i in range(num_servos):
         t_i = t - distances[i] / (2 * math.pi * freq) * convey
         if t_i < 0:
@@ -213,17 +231,42 @@ def damped_oscillation_displace(t, num_servos, mode_params):
     return np.array(vals, dtype=float)
 
 
+def random(t, num_servos):
+    np.random.seed(int(t * 1000))  # Seed with time for reproducibility
+    vals = np.random.uniform(-1, 1, num_servos)
+    return vals
+
+
+def random_sin(t, num_servos):
+    vals = [0] * num_servos
+    for i in range(num_servos):
+        np.random.seed(i)  # Seed with servo index for consistency
+        phase_shift = np.random.uniform(0, 2 * math.pi)
+        freq = base_freq()
+        vals[i] = math.sin(2 * math.pi * freq * t + phase_shift)
+    return vals
+
+
+def random_sin_freq(t, num_servos):
+    vals = [0] * num_servos
+    for i in range(num_servos):
+        np.random.seed(i)  # Seed with servo index for consistency
+        phase_shift = np.random.uniform(0, 2 * math.pi)
+        freq = np.random.uniform(0.1, base_freq()) ** 2
+        vals[i] = math.sin(2 * math.pi * freq * t + phase_shift)
+    return vals
+
+
 # -------------------------
 # Frame builder
 # -------------------------
-def make_frame(t, num_servos, params):
-    mode_id = str(params.get("MODE", "1"))
-    mode_params = params["MODES"][mode_id]
-    func_name = mode_params.get("FUNC", "sin")
+def make_frame(t, num_servos):
+    params_mode = get_params_mode()
+    func_name = params_mode.get("FUNC", "sin")
     func = globals().get(func_name, sin)
-    direction = float(mode_params.get("DIRECTION", 1.0))
-    offset = float(params.get("STROKE_OFFSET", 0.0))
+    direction = float(params_mode.get("DIRECTION", 1.0))
+    offset = float(get_params_full().get("STROKE_OFFSET", 0.0))
 
-    raw = func(t * direction, num_servos, mode_params)
-    amp = amplitude_modulation(t, num_servos, mode_params)
+    raw = func(t * direction, num_servos)
+    amp = amplitude_modulation(t, num_servos)
     return raw * amp + offset

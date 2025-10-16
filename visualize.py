@@ -5,7 +5,7 @@ import os
 import importlib
 from mpl_toolkits.mplot3d import Axes3D  # 3Dプロット用
 from osc_params import params, NUM_SERVOS
-import osc_modes
+import osc_webUI.osc_modes as osc_modes
 
 plt.style.use("dark_background")
 
@@ -33,7 +33,9 @@ def plot_make_frame(fig=None, ax=None):
     all_vals = []
     times = np.linspace(0, duration, num_frames)
     for t in times:
-        vals = osc_modes.make_frame(t, num_servos, params)
+        vals = osc_modes.make_frame(t, num_servos, params) - params.get(
+            "STROKE_OFFSET", 0
+        )
         all_vals.append(vals)
     all_vals = np.array(all_vals)  # shape: (num_frames, num_servos)
 

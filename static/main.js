@@ -1,3 +1,5 @@
+const socket = io();
+
 function formatOutputWithCommas(outputElement) {
     const value = parseFloat(outputElement.textContent);
     if (!isNaN(value)) {
@@ -220,7 +222,25 @@ function sendHalt() {
         });
 }
 
-// Format all outputs with commas on page load
+socket.on('param_update', function (data) {
+    const { key, value } = data;
+    console.log(`Param updated: ${key} = ${value}`);
+
+    const outputElement = document.querySelector(`[data-param="${key}"]`);
+    const displayElement = document.getElementById(`${key}_out`);
+    if (outputElement) {
+        outputElement.value = value;
+        outputElement.classList.add('updated');
+        setTimeout(() => outputElement.classList.remove('updated'), 100);
+    }
+    if (displayElement) {
+        displayElement.textContent = value;
+        formatOutputWithCommas(displayElement);
+        displayElement.classList.add('updated');
+        setTimeout(() => displayElement.classList.remove('updated'), 100);
+    }
+});
+
 window.addEventListener('DOMContentLoaded', function () {
 
     window.addEventListener('keydown', function (event) {

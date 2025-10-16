@@ -15,7 +15,8 @@ form {
     border-radius: 8px;
     box-shadow: 0 2px 8px #0001;
     padding: 2em;
-    max-width: 400px;
+    max-width: 600px;
+    min-width: 400px;
     margin: 0 auto;
 }
 
@@ -40,7 +41,7 @@ label i {
 }
 
 label span {
-    min-width: 7em;
+    min-width: 9em;
     display: inline-block;
 }
 
@@ -93,4 +94,18 @@ button {
 .floating-button:hover {
     background-color: #c9302c;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.updated {
+    animation: flash 1s ease-in-out;
+}
+
+@keyframes flash {
+    0% {
+        background-color: #FF0;
+    }
+
+    100% {
+        background-color: transparent;
+    }
 }

@@ -1,7 +1,13 @@
 from pythonosc.udp_client import SimpleUDPClient
-from osc_params import params, VALS_PER_HOST, NUM_SERVOS
+from osc_params import (
+    VALS_PER_HOST,
+    NUM_SERVOS,
+    get_params_full,
+    set_param_full,
+    get_params_mode,
+)
 from osc_modes import make_frame
-import sys, time, math
+import sys, time, math, random
 
 prev_vals = None
 
@@ -17,17 +23,20 @@ def set_prev_vals(vals):
 
 
 def get_clients():
-    return [SimpleUDPClient(host, int(params["PORT"])) for host in params["HOSTS"]]
+    return [
+        SimpleUDPClient(host, int(get_params_full()["PORT"]))
+        for host in get_params_full()["HOSTS"]
+    ]
 
 
 def get_client_gh():
-    return SimpleUDPClient(params["HOST"], int(params["PORT"]))
+    return SimpleUDPClient(get_params_full()["HOST"], int(get_params_full()["PORT"]))
 
 
 def send_all_setTargetPositionList(vals):
     sent_boards = False
     sent_gh = False
-    if params.get("SEND_CLIENTS", True):
+    if get_params_full().get("SEND_CLIENTS", True):
         clients = get_clients()
         for i, client in enumerate(clients):
             vals_part = vals[i * VALS_PER_HOST : (i + 1) * VALS_PER_HOST]
@@ -35,16 +44,29 @@ def send_all_setTargetPositionList(vals):
                 client.send_message("/setTargetPositionList", vals_part)
                 sent_boards = True
             except Exception as e:
-                print(f"send error to {params['HOSTS'][i]}:", e)
-    if params.get("SEND_CLIENT_GH", False):
+                print(f"send error to {get_params_full()['HOSTS'][i]}:", e)
+    if get_params_full().get("SEND_CLIENT_GH", False):
         client_gh = get_client_gh()
         try:
             client_gh.send_message("/setTargetPositionList", vals)
             sent_gh = True
         except Exception as e:
-            print(f"send error to {params['HOST']}: {e}")
+            print(f"send error to {get_params_full()['HOST']}: {e}")
     set_prev_vals(vals)
     return sent_boards, sent_gh
+
+
+def gh_reset():
+    if get_params_full().get("SEND_CLIENT_GH", False):
+        client_gh = get_client_gh()
+        try:
+            client_gh.send_message(
+                "/reset",
+                get_params_full()["NUM_SERVOS"]
+                * [get_params_full().get("STROKE_OFFSET", 50000)],
+            )
+        except Exception as e:
+            print(f"send error to {get_params_full()['HOST']}: {e}")
 
 
 def filter_vals(raw_vals, alpha):
@@ -57,7 +79,7 @@ def filter_vals(raw_vals, alpha):
         vals = [int(p + alpha * (c - p)) for p, c in zip(prev, raw_vals)]
 
     limited_absolute = False
-    limit_absolute = params.get("LIMIT_ABSOLUTE")
+    limit_absolute = get_params_full().get("LIMIT_ABSOLUTE")
     for i in range(len(vals)):
         if vals[i] > limit_absolute:
             vals[i] = limit_absolute
@@ -67,7 +89,7 @@ def filter_vals(raw_vals, alpha):
             limited_absolute = True
 
     limited_relational = False
-    limit_relational = params.get("LIMIT_RELATIONAL")
+    limit_relational = get_params_full().get("LIMIT_RELATIONAL")
     valsLPF = vals.copy()
 
     def solve_relational_limit(a, c):
@@ -88,24 +110,77 @@ def filter_vals(raw_vals, alpha):
     return vals
 
 
-def osc_sender(params, stop_event):
-    from osc_sender import send_all_setTargetPositionList
+def osc_sender(stop_event):
 
-    interval = 1.0 / float(params["RATE_fps"])
-    start = time.time()
+    # u[f+1] = u[f] + dudt * dt
+    u = 0.0
+    u_t_rate = 1.0
+    u_t_rate_target = 1.0
+    u_t_rate_accel = 0.01  # absolute
+    u_t_keep = 0
+
+    dt = 1.0 / float(get_params_full()["RATE_fps"])
+    t_schedule = time.time() + dt
+
     frame = 0
     last_msg_len = 0
-    mode = params.get("MODE")
+    mode = get_params_full().get("MODE")
+
+    easing_from = []
+    easing_to = []
+
     while not stop_event.is_set():
-        now = time.time()
-        if mode != params.get("MODE"):
-            mode = params.get("MODE")
+        if mode != get_params_full().get("MODE"):
+            mode = get_params_full().get("MODE")
+            set_param_full("MODE", mode)
             sys.stderr.write(f"\n=== MODE: {mode} ===\n")
-            start = now
+            easing_duration = get_params_mode().get("EASING_DURATION", 1.0)
+            if easing_duration > 0.0:
+                u = -easing_duration
+                easing_from = get_prev_vals()
+                easing_to = make_frame(0, NUM_SERVOS)
+            else:
+                u = 0.0
+            u_t_keep = 0
             frame = 0
 
-        raw_vals = make_frame(now - start, NUM_SERVOS, params)
-        alpha = float(params.get("ALPHA", 0.2))
+        u_t_keep += dt
+
+        raw_vals = get_prev_vals()
+        if u >= 0:
+            U_FREQUENTNESS = get_params_mode().get("U_FREQUENTNESS", 0.1)
+            U_WIDTH = get_params_mode().get("U_WIDTH", 1.0)
+            if U_FREQUENTNESS <= 0.0 or U_WIDTH <= 0.0:
+                u_t_rate_target = get_params_mode().get("U_AVERAGE", 1.0)
+            elif u_t_keep >= (1.0 / U_FREQUENTNESS):
+                u_t_rate_target = random.uniform(
+                    get_params_mode().get("U_AVERAGE", 1.0)
+                    - get_params_mode().get("U_WIDTH", 1.0) / 2,
+                    get_params_mode().get("U_AVERAGE", 1.0)
+                    + get_params_mode().get("U_WIDTH", 1.0) / 2,
+                )
+                u_t_keep = 0.0
+                print(f"\nNew u_t_rate_target: {u_t_rate_target:.3f}")
+
+            if u_t_rate - u_t_rate_target > u_t_rate_accel:
+                u_t_rate -= u_t_rate_accel
+            elif u_t_rate - u_t_rate_target < -u_t_rate_accel:
+                u_t_rate += u_t_rate_accel
+            else:
+                u_t_rate = u_t_rate_target
+            u_t_rate = max(u_t_rate, 0.0)
+
+            u += u_t_rate * dt
+
+            raw_vals = make_frame(u, NUM_SERVOS)
+        else:
+            for i in range(NUM_SERVOS):
+                raw_vals[i] = easing_from[i] * (
+                    1 - (u_t_keep / easing_duration)
+                ) + easing_to[i] * (u_t_keep / easing_duration)
+            u += dt
+
+        alpha = float(get_params_full().get("ALPHA", 0.2))
         prev = get_prev_vals()
         if prev is None:
             set_prev_vals(raw_vals)
@@ -122,8 +197,10 @@ def osc_sender(params, stop_event):
         sys.stderr.write(msg + pad)
         sys.stderr.flush()
         last_msg_len = len(msg)
+
         frame += 1
-        elapsed = time.time() - now
-        sleep_time = interval - elapsed
+
+        t_schedule += dt
+        sleep_time = t_schedule - time.time()
         if sleep_time > 0:
             time.sleep(sleep_time)

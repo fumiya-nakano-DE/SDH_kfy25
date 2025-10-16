@@ -7,11 +7,12 @@ VALS_PER_HOST = 8
 NUM_SERVOS = 32
 
 # Default parameters hard-coded in this file are used
-# only when params.json is not existent or incomplete.
+# only when _params.json is not existent or incomplete.
 
 DEFAULT_MODES = {}
 
-params = {
+
+_params = {
     "MODE": "1",
     "MODES": DEFAULT_MODES.copy(),
     "PORT": 50000,
@@ -32,26 +33,76 @@ params = {
 
 def save_params():
     with open(PARAMS_FILE, "w", encoding="utf-8") as f:
-        json.dump(params, f, ensure_ascii=False, indent=2)
+        json.dump(_params, f, ensure_ascii=False, indent=2)
 
 
 def load_params():
-    global params
+    global _params
     try:
         with open(PARAMS_FILE, "r", encoding="utf-8") as f:
             loaded = json.load(f)
             if "MODES" in loaded:
                 for k, v in loaded["MODES"].items():
-                    params["MODES"][k] = v
+                    _params["MODES"][k] = v
                 del loaded["MODES"]
             for k, v in loaded.items():
                 if k == "HOSTS" and not v:
                     continue
-                params[k] = v
-            if "HOSTS" not in params:
-                params["HOSTS"] = HOSTS
+                _params[k] = v
+            if "HOSTS" not in _params:
+                _params["HOSTS"] = HOSTS
     except Exception:
         pass
+
+
+def get_params_full() -> dict:
+    return _params
+
+
+def get_params_mode() -> dict:
+    return _params.get("MODES", {}).get(str(_params.get("MODE", "1")), {})
+
+
+def set_param_full(key, value):
+    global _params
+    _params[key] = value
+    save_params()
+    return
+
+
+def set_param_mode(key, value):
+    global _params
+    mode_id = str(_params.get("MODE", "1"))
+    if "MODES" not in _params:
+        _params["MODES"] = {}
+    if mode_id not in _params["MODES"]:
+        _params["MODES"][mode_id] = {}
+    _params["MODES"][mode_id][key] = value
+    save_params()
+    return
+
+
+def set_params(**kwargs):
+    global _params
+
+    for key, value in kwargs.items():
+        if key in _params and key == "MODE":
+            print(f"Setting param '{key}' to: {value}")
+            _params[key] = value
+
+    for key, value in kwargs.items():
+        if key in _params and key != "MODE":
+            print(f"Setting param '{key}' to: {value}")
+            _params[key] = value
+        elif key in _params.get("MODES", {}).get(str(_params.get("MODE", "1")), {}):
+            mode_id = str(_params.get("MODE", "1"))
+            if "MODES" not in _params:
+                _params["MODES"] = {}
+            if mode_id not in _params["MODES"]:
+                _params["MODES"][mode_id] = {}
+            _params["MODES"][mode_id][key] = value
+    save_params()
+    return
 
 
 load_params()
