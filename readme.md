@@ -1,21 +1,19 @@
 # kfy25
 
 Welcome to the `kfy25` project!
+英文の箇所はcopilotが書いているので嘘が混じることがあります。参考程度に。
 
 ## Overview
 
-kfy25 is a web-based OSC servo controller built with Flask and python-osc.  
-It provides a browser UI to control multiple servos, tune parameters in real time, and receive feedback from devices.
+kfy25 is a web-based OSC servo controller built with Flask and python-osc. It provides a browser UI to control multiple servos, tune parameters in real time, and receive feedback from devices.
 
-## What's new / Changelog (recent)
+This README has been updated to reflect recent changes in the repository (Oct 2025): a parallel OSC listener helper in `sendosc.py`, a per-template FontAwesome toggle for offline use, and an added `STROKE_OFFSET` UI control.
 
-- Refactored osc_modes: common waveform/core logic extracted; window functions (gaussian/rectangular) separated and reusable.
-- Added "soliton" (isolated wave) mode and AMP_MODE support (solid/cone).
-- Homing: server now waits for device homingStatus == 3 (completion) before re-enabling servo mode.
-- get_target_position: clears previous cached value and waits for fresh OSC /position response (configurable timeout).
-- osc_receiver: collects /position and /homingStatus per motor with timestamps.
-- UI improvements: updated Font Awesome 6 class names, formatted target position with thousands separators.
-- Server: run without Flask reloader (avoids duplicate threads); timeouts configurable via params.json.
+## Quick highlights (recent changes)
+
+- Added a background OSC listener helper to `sendosc.py` which can start an OSC receiver on port 50100 and print incoming messages while the sender continues to run.
+- The WebUI templates now include a small HTML-level toggle to enable/disable FontAwesome icons (`USE_FA` variable in `templates/index.html`) so the UI works offline when FA is disabled.
+- A new slider for `STROKE_OFFSET` was added to the WebUI (range -3000 .. 3000, step 100) so you can shift stroke center per-frame.
 
 ## Features
 
@@ -23,7 +21,7 @@ It provides a browser UI to control multiple servos, tune parameters in real tim
 - Multi-host support: distribute servo commands to multiple HUBs
 - Start/Stop OSC sending with smoothing/filtering
 - Homing, Init, Release, Step, ResetPos, SetTargetPosition, GetTargetPosition
-- OSC receive support: listens on multiple ports (default 50100–50103) and maps feedback to motorID
+- OSC receive support: listens on multiple ports (default: 50100–50103) and maps feedback to motorID
 - Persistent parameter storage in `params.json`
 - Modular code: `osc_params.py`, `osc_modes.py`, `osc_sender.py`, `osc_receiver.py`, `send_osc_webUI.py`
 
@@ -34,141 +32,219 @@ It provides a browser UI to control multiple servos, tune parameters in real tim
   - flask
   - python-osc
   - numpy
+  - flask_socketio
 
 Install:
 
-``` bash
-pip install flask python-osc numpy
+```powershell
+pip install flask python-osc numpy flask_socketio
 ```
 
-## Run
+## Run (WebUI)
 
-Start server:
+Start server (development / local):
 
-``` bash
-python send_osc_webUI.py
+```powershell
+python osc_webUI\ritsudo_server.py
 ```
 
-By default the app runs with the Flask reloader disabled to avoid double-starting background OSC threads.
+Open in browser:
 
-Open:
-
-``` bash
+```text
 http://localhost:5000/
 ```
 
-## Important behaviors / notes
+Notes: the main server entry is `osc_webUI/ritsudo_server.py` (replaces older `send_osc_webUI.py`). By default the app is configured to avoid running duplicate OSC receiver threads from the Flask reloader; use the file above to start the server directly.
 
-- motorID indexing: the WebUI and API use 1-based motorID.
-- Homing: when issuing a homing command to a motor, the server waits for the device to send `/homingStatus (local_id, status)` and treats `status == 3` as completion. The device is re-enabled after completion (or timeout).
-- Get position: when calling `/get_target_position`, the server clears any cached value for that motor, sends `/getPosition` to the device, and waits (configurable) for a fresh `/position` OSC message before returning.
-- OSC receive mapping: received `/position (local_id, position)` is converted to a global motorID using the receiving port index and VALS_PER_HOST (see `osc_params.py`).
-- Timeouts and other behavior are configurable in `params.json` (e.g., `GETPOS_TIMEOUT`, `HOMING_TIMEOUT`).
+## Run (quick listener + sender)
+
+If you want a lightweight script that both sends an initial message and listens in parallel on port 50100 and prints any incoming OSC messages, use `sendosc.py`.
+
+Start it:
+
+```powershell
+python sendosc.py
+```
+
+This will:
+
+- start a background OSC receiver on `0.0.0.0:50100` and print incoming messages with a `[OSC 50100]` prefix
+- send `/enableServoMode [1, 0]` to the configured HOST/PORT in the file
+
+Keep the process running; press Ctrl+C to stop.
+
+If you only need to run the OSC receivers used by the full server stack, the Flask app (`send_osc_webUI.py`) already starts OSC receiver threads on the configured `OSC_RECV_PORTS` (defaults to `[50100,50101,50102,50103]`).
+
+
+## How OSC receive mapping works
+
+The receiver maps incoming `/position (local_id, position)` and `/homingStatus (local_id, status)` messages to global motor IDs by combining the receiving port's index (in `OSC_RECV_PORTS`) and `VALS_PER_HOST` (from `osc_params.py`). See `osc_webUI/osc_receiver.py` for implementation details.
+
+## Quick troubleshooting
+
+- If you don't see incoming OSC messages on the listener, ensure no firewall is blocking UDP on the listening port(s).
+- Verify the device's IP and that it's sending to the correct destination port (default 50100).
+- If running behind Docker/VM, ensure UDP port forwarding is configured.
 
 ## File Structure
 
-``` misc
+```text
 osc_webUI/
-├── osc_modes.py         # Mode-specific waveform/animation logic
-├── osc_params.py        # Parameter definitions, load/save logic
-├── osc_sender.py        # OSC communication and filtering logic
-├── osc_receiver.py      # OSC receive logic and feedback handling
-├── send_osc_webUI.py    # Flask app entry point and routing
+├── modes.md
+├── osc_listener.py
+├── osc_modes.py
+├── osc_params.py
+├── osc_receiver.py
+├── osc_sender.py
+├── ritsudo_server.py        # main server entry
+├── visualize.py
 ├── static/
-│   ├── main.js          # Frontend JS logic
-│   └── style.css        # UI styling
+│   ├── main.js
+│   └── style.css
 ├── templates/
-│   └── index.html       # WebUI template
-├── params.json          # Persistent parameter storage (auto-generated)
-└── spiral-torso_OSC_002_STEP800.gh # Example Grasshopper file
+│   └── index.html
+```
+
+## System structure
+
+The following diagram shows the logical components and their interactions (OSC send/receive flows):
+
+```mermaid
+graph LR
+    Browser[Browser UI]
+    Flask(ritsudo_server.py) -- HTTP/HTML/JS/CSS --> Browser
+    Flask -- websocket/rest --> Browser
+
+    subgraph Server
+      osc_modes -- uses --> osc_params[osc_params.py]
+      osc_sender -- uses --> osc_modes[osc_modes.py]
+      Flask -- uses --> osc_sender[osc_sender.py]
+      Flask -- uses --> osc_receiver[osc_receiver.py]
+    end
+
+    osc_sender -- UDP(OSC) --> Hubs["Hardware HUBs (10.0.0.100~103:50000)"]
+    Hubs -- UDP(OSC) feedback --> osc_receiver
+    osc_receiver["osc_receiver (10.0.0.10:50100~50103)"] -- updates --> Flask
+
+    sendosc2board["send_osc_to_ritsudo-server.py (dev tool)"] -. run locally .-> Hubs
+    sendosc2server["send_osc_to_STEP800.py (dev tool)"] -. UDP(OSC)[*1] .-> Flask
+    visualizer["visualize.py (dev tool)"]-- uses --> osc_modes
 ```
 
 ## Notes
 
-- [Ponoor Step Series Documentation](https://ponoor.com/docs/step-series/)
-- All parameter changes are saved to `params.json` automatically.
-- The UI is designed for use with modern browsers.
-- **OSC receive**: The system listens on multiple ports (default: 50100–50103) and maps feedback to the correct motorID, supporting multi-device feedback and synchronization.
-- **motorID**: The system uses 1-based indexing for motorID in the UI and API.
+- Parameter changes are saved to `params.json` automatically.
+- The UI is designed for modern browsers. Set `USE_FA=false` in the template for offline environments.
 
-## System Structure
+## [*1] Player->Server OSC messages
 
-```mermaid
-graph LR
-    subgraph Web Browser UI
-        Browser@{ img: "https://github.com/rio-fujimiya/Resource-Delivery/blob/main/kfy25/webUI.png?raw=true", h: 720, constraint: "on" }
-    end
+基本的に、WebUIの項目名のパラメータはいずれもそのまま送ることができます
+送信先は現状以下の通りです
 
-    subgraph Server
-        subgraph Flask[ ]
-            flask-m(Flask server)
-            flask-m -.- modes-m(modes)
-            flask-m -.- params-m(params)
-            flask-m -.- osc-m(osc sender/receiver)
-        end
-
-        Params("params.json")
-    end
-
-    subgraph gh[Grasshopper preview]
-        GH-img@{ img: "https://github.com/rio-fujimiya/Resource-Delivery/blob/main/kfy25/gh.png?raw=true", h: 100, constraint: "on" }
-    end
-    osc-m -- OSC UDP<br/>[127.0.0.1:5000]<br/>/setTargetPositionList ---> gh
-
-    subgraph Motion Visualizer
-        pyplot@{ img: "https://github.com/rio-fujimiya/Resource-Delivery/blob/main/kfy25/visualizer.png?raw=true", h: 200, constraint: "on" }
-    end
-    modes-m --> pyplot
-    params-m --> pyplot
-
-    subgraph Ethernet
-        Hub[switching hub]
-        Hub --- S8-1[STEP800 ID:0<br/>motorID:1~8]
-        Hub --- S8-2[STEP800 ID:1<br/>motorID:9~16]
-        Hub --- S8-3[STEP800 ID:2<br/>motorID:17~24]
-        Hub --- S8-4[STEP800 ID:3<br/>motorID:25~32]
-    end
-
-    Browser -- HTTP/HTML/JS/CSS <--> flask-m
-    params-m -- write/read <--> Params
-    osc-m -- OSC UDP<br/>[10.0.0.100~103:50000]<br/>/setTargetPositionList, /setServoParam, /getPosition, etc. ---> Hub
-    Hub -- OSC UDP<br/>[10.0.0.10:50100~50103]<br/>/position, /booted --> osc-m    
+``` json
+HOST = "127.0.0.1"//ローカルホスト
+PORT_SEND = 10000
 ```
 
-## Python Module Dependency
+### グローバルパラメータ
 
-```mermaid
-graph TD
-    send_osc_webUI("send_osc_webUI.py<br/>Flask app")
-    visualizer("visualize.py<br/>pyplot")
-    visualizer  -- "params{}, NUM_SERVOS" --> osc_params
+- `/STROKE_OFFSET [(int) stroke_offset >=0]`
+  - メカニカルな原点から、動作の中立点までの距離です
+  - 単位はL6470内のステップ距離です
+  - 典型値は`50000`です
 
-    osc_sender("osc_sender.py<br/>OSC send/filter")
-    osc_receiver("osc_receiver.py<br/>OSC receive/feedback")
-    osc_modes("osc_modes.py<br/>Waveform/mode logic")
-    osc_params("osc_params.py<br/>Params/load/save")
-    osc_sender -- "make_frame()" --> osc_modes
-    
-    send_osc_webUI -- "send_all_setTargetPositionList(), get_clients(), osc_sender(), filter_vals()" --> osc_sender
-    send_osc_webUI -- "start_osc_receiver_thread(), register_booted_callback(), get_latest_position()" --> osc_receiver
-    send_osc_webUI -- "params{}, save_params()" --> osc_params
+- `/LIMIT_ABSOLUTE [(int) limit_absolute]`
+  - メカニカルな原点から、伸長側の動作限界までの距離=絶対限界値です
+  - 単位はL6470内のステップ距離です
+  - 当然`stroke_offset`より大きい必要があります
+  - 典型値は`120000`です
 
-    osc_sender -- "params{}, VALS_PER_HOST, NUM_SERVOS" --> osc_params
-    osc_modes -- "params{}" --> osc_params
-    osc_receiver -- "params{}, OSC_RECV_PORTS, VALS_PER_HOST" --> osc_params
-    visualizer  -- "make_frame()" --> osc_modes
-```
+- `/LIMIT_RELATIONAL [(int) limit_relational]`
+  - 両隣の伸び具合から計算される、ベルトが伸びきるまでの距離=相対限界値です
+    - 内部的には抽象化された先端同士の距離を余弦定理と一元二次方程式で評価しています
+  - 単位はL6470内のステップ距離です
+  - 当然`stroke_offset`より大きい必要があります
+  - 典型値は`173205`です
 
-**Dependency summary:**
+- `/ALPHA [(float) alpha >0]`
+  - ステッピングモータ(サーボ)指示値にかけるローパスフィルタのαです
+  - `1.0`でLPFなし、`0.0`に近いほどフィルタ強いです
+  - 典型値は`0.3`です
 
-- `send_osc_webUI.py` is the Flask entry point and imports all logic modules.
-- `osc_sender.py` handles OSC communication and filtering, and depends on `osc_params.py` for parameters and `osc_modes.py` for waveform generation.
-- `osc_receiver.py` handles OSC feedback and device state, and depends on `osc_params.py` for configuration.
-- `osc_modes.py` provides waveform/mode logic and may reference parameters from `osc_params.py`.
-- `osc_params.py` manages parameter definitions and persistent storage, and is the base for all.
+### モード固有パラメータ
 
-## Feedback and Support
+- `/MODE [(int) mode]`  
+  - モード番号(`101:Simple Sine`のとき、`101`)を送ります
+  - 他のモード固有パラメータとあわせてbundle送信するのが推奨です
 
-- For device setup, refer to [Ponoor Step Series Tutorial](https://ponoor.com/docs/step-series/tutorial/)
-- For network and DIP switch settings, see [Ponoor Step Series Network Settings](https://ponoor.com/docs/step-series/settings/network-and-dip-switch/)
-- For issues or feature requests, please open an issue on your repository or contact the maintainer.
+- `/EASING_DURATION [(float) easing_time >=0]`
+  - モード切替直後のイージング時間をsecで指定
+
+- `/BASE_FREQ [(float) base_freq >=0]`
+  - 動作の速さの基準値をHzで指定
+
+- `/U_AVERAGE [(float) dudt]`
+  - 実時刻`t`に対する可変時刻`u`の進みの速さの倍率の、平均値を指定
+  - `u`は設定によらず非負です
+  
+- `/U_WIDTH [(float) u_width >=0]`
+  - 実時刻`t`に対する可変時刻`u`の進みの速さの倍率の、ランダム幅(全幅*1/2)を指定します
+  - `0`にすると`U_AVERAGE`での設定で固定されます
+  - ランダムは`U_AVERAGE - U_WIDTH ~ U_AVERAGE + U_WIDTH`の間で単純に分布します
+  - `u`の変化率(=`dudt`)の、変化率(=`dud^2t`)は今のところ固定です
+  
+- `/U_FREQUENTNESS [(float) u_width >=0]`
+  - `u`(正確には`dudt`)をランダム変更する時間間隔をHzで指定します
+  - `0`にすると`U_AVERAGE`での設定で固定されます
+  - 変更タイミングにはランダムを入れていません(0.1に設定したら10秒間隔で`dudt`が変わる)
+
+- `/DIRECTION [(int) 0 or 1]`
+  - 位相の進む方向を逆にできます
+
+以下のパラメータは、`mode`によっては無い場合があります
+(`params.json`のその`mode`のエントリに記載がない場合は無いです)
+
+- `/PHASE_RATE [(float) phase_rate]`
+  - 鉛直方向に位相遅れを入れるパラメータです
+
+- `/PARAM_A [(float) param_a]`
+  - モードに固有の特徴量その１
+  - 原則`0~1`に正規化
+
+- `/PARAM_B [(float) param_b]`
+  - モードに固有の特徴量その2
+  - 原則`0~1`に正規化
+
+- `/STROKE_LENGTH [(int) stroke_length >=0]`
+  - 動作量(振幅*1/2)です
+  - 単位はL6470内のステップ距離です
+  - 典型値は`50000`です
+
+- `/AMP_FREQ [(float) amp_freq]`
+  - 主たる動きの周波数とは別に、振幅係数のみ周波数を変えることができる`mode`があります
+  - `f = STROKE_LENGTH * motion(base_freq * dudt * t) * amplitude(amp_freq * dudt * t)`
+
+- `/AMP_PARAM_A [(float) param_a]`
+  - 振幅関数に固有の特徴量その１
+  - 原則`0~1`に正規化
+
+- `/AMP_PARAM_B [(float) param_b]`
+  - 振幅関数に固有の特徴量その2
+  - 原則`0~1`に正規化
+
+### グローバルコマンド
+
+- `/Start []`【未実装】
+  - 動作の開始
+- `/Stop []`【未実装】
+  - 動作の終了
+- `/Init []`【未実装】
+  - L6470をリセット→起動→コンフィギュレーション
+- `/Home []`【未実装】
+  - 全軸を順次ホーミング動作
+- `/Neutral []`【未実装】
+  - 全軸を中立位置`stroke_offset`に移動
+- `/Release []`【未実装】
+  - 全軸をSoft HiZ(脱磁)
+- `/Halt []`【未実装】
+  - 緊急停止(Hard Hizで脱磁し、サーバ内の動作計算スレッドを停止)
