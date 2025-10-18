@@ -126,8 +126,8 @@ graph LR
     Hubs -- UDP(OSC) feedback --> osc_receiver
     osc_receiver["osc_receiver (10.0.0.10:50100~50103)"] -- updates --> Flask
 
-    sendosc2board["send_osc_to_ritsudo-server.py (dev tool)"] -. run locally .-> Hubs
-    sendosc2server["send_osc_to_STEP800.py (dev tool)"] -. UDP(OSC)[*1] .-> Flask
+    sendosc2board["send_osc_to_STEP800.py (dev tool)"] -. run locally .-> Hubs
+    sendosc2server["send_osc_to_ritsudo-server.py (dev tool)"] -. UDP(OSC)[*1] .-> Flask
     visualizer["visualize.py (dev tool)"]-- uses --> osc_modes
 ```
 
@@ -198,7 +198,7 @@ PORT_SEND = 10000
   - `0`にすると`U_AVERAGE`での設定で固定されます
   - 変更タイミングにはランダムを入れていません(0.1に設定したら10秒間隔で`dudt`が変わる)
 
-- `/DIRECTION [(int) 0 or 1]`
+- `/DIRECTION [(int) -1 or 1]`
   - 位相の進む方向を逆にできます
 
 以下のパラメータは、`mode`によっては無い場合があります
