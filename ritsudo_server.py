@@ -355,7 +355,6 @@ def set_PID():
 
 
 def init(enable=True):
-
     clients = get_clients()
     booted_ports = set()
 
@@ -531,6 +530,8 @@ def listener_message_callback(address, *args):
             return init(enable=False)
         elif candidate == "Halt":
             return halt()
+        elif candidate == "RaiseError":
+            return 1 / 0
         logger.warning(f"not matching no-arg command for candidate '/{candidate}'")
         return
 
@@ -580,27 +581,32 @@ def handle_bundle(bundle_contents):
 
 # --- MAIN ---
 if __name__ == "__main__":
-    print("Starting Ritsudo Server...")
-    logger.info("Ritsudo Server is starting.")
-
-    register_message_callback(listener_message_callback)
-    register_bundle_callback(handle_bundle)
-    start_osc_listener_thread()
-
-    web_host = os.getenv("WEB_HOST", "0.0.0.0")
-    web_port = int(os.getenv("WEB_PORT", "5000"))
-
-    lan_ip = None
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        lan_ip = s.getsockname()[0]
-        s.close()
-    except Exception:
-        try:
-            lan_ip = socket.gethostbyname(socket.gethostname())
-        except Exception:
-            lan_ip = None
+        print("Starting Ritsudo Server...")
+        logger.info("Ritsudo Server is starting.")
 
-    socketio.run(app, host=web_host, port=web_port, use_reloader=False)
-    # Disable reloader to avoid double-starting threads
+        register_message_callback(listener_message_callback)
+        register_bundle_callback(handle_bundle)
+        start_osc_listener_thread()
+
+        web_host = os.getenv("WEB_HOST", "0.0.0.0")
+        web_port = int(os.getenv("WEB_PORT", "5000"))
+
+        lan_ip = None
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            lan_ip = s.getsockname()[0]
+            s.close()
+        except Exception:
+            try:
+                lan_ip = socket.gethostbyname(socket.gethostname())
+            except Exception:
+                lan_ip = None
+                logger.warning("Could not determine LAN IP address.")
+
+        socketio.run(app, host=web_host, port=web_port, use_reloader=False, debug=False)
+        # Disable reloader to avoid double-starting threads
+
+    except Exception:
+        logger.info("Ritsudo Server is shutting down.")

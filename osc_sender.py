@@ -141,7 +141,7 @@ def osc_sender(stop_event):
             starting_motion = False
             mode = get_params_full().get("MODE")
             set_param_full("MODE", mode)
-            print(f"\n=== MODE: {mode} ===\n")
+            print(f"=== MODE: {mode} ===")
             logger.info("Switched to mode %s", mode)
             easing_duration = get_params_mode().get("EASING_DURATION", 1.0)
             if easing_duration > 0.0:

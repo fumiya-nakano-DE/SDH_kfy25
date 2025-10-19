@@ -53,6 +53,7 @@ def load_params():
             if "HOSTS" not in _params:
                 _params["HOSTS"] = HOSTS
     except Exception:
+        logger.debug("No existing params.json found. Using default parameters.")
         pass
 
 
