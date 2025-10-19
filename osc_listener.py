@@ -32,7 +32,7 @@ class MyUDPHandler(socketserver.BaseRequestHandler):
             pass
 
         if is_bundle:
-            print(f"Received a bundle {pkt.messages}")
+            print(f"Received a bundle from PLAYER {pkt.messages}")
             bundle_contents = []
             for timed in pkt.messages:
                 msg = timed.message
@@ -50,7 +50,7 @@ class MyUDPHandler(socketserver.BaseRequestHandler):
                 msg = timed.message
                 addr = msg.address
                 args = msg.params
-                print(f"Received a single message {addr} {args}")
+                print(f"Received a single message from PLAYER {addr} {args}")
                 for cb in _message_callbacks:
                     try:
                         cb(addr, *args)
@@ -63,7 +63,7 @@ def start_osc_listener(port):
         allow_reuse_address = True
 
     server = Server(("0.0.0.0", port), MyUDPHandler)
-    print(f"OSC listener (low-level) started on port {port}")
+    print(f"OSC listener from PLAYER started on port {port}")
     server.serve_forever()
 
 

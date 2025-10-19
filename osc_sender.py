@@ -129,8 +129,11 @@ def osc_sender(stop_event):
     easing_from = []
     easing_to = []
 
+    starting_motion = True
+
     while not stop_event.is_set():
-        if mode != get_params_full().get("MODE"):
+        if mode != get_params_full().get("MODE") or starting_motion:
+            starting_motion = False
             mode = get_params_full().get("MODE")
             set_param_full("MODE", mode)
             sys.stderr.write(f"\n=== MODE: {mode} ===\n")

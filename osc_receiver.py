@@ -55,7 +55,7 @@ def reset_latest_homing_status(motor_id):
 
 def osc_receive_handler_factory(port):
     def handler(address, *args):
-        print(f"Received OSC on port {port}: {address} {args}")
+        print(f"Received OSC from BOARD on port {port}: {address} {args}")
         if address == "/booted":
             for cb in _booted_callbacks:
                 cb(port, *args)
@@ -93,7 +93,7 @@ def start_osc_receiver(port):
     dispatcher = Dispatcher()
     dispatcher.set_default_handler(osc_receive_handler_factory(port))
     server = BlockingOSCUDPServer(("0.0.0.0", port), dispatcher)
-    print(f"OSC Receiver started on port {port}")
+    print(f"OSC Receiver from BOARD started on port {port}")
     server.serve_forever()
 
 
@@ -101,7 +101,7 @@ def start_osc_receiver_thread():
     global osc_receiver_started
     with osc_receiver_lock:
         if osc_receiver_started:
-            print("OSC Receiver already running. Skipping duplicate start.")
+            print("OSC Receiver from BOARD already running. Skipping duplicate start.")
             return
         osc_receiver_started = True
     for port in OSC_RECV_PORTS:

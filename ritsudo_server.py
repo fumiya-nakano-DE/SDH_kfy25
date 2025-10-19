@@ -87,6 +87,13 @@ def wait_for_homing_complete(motor_id, timeout=12.0, poll_interval=0.05):
     end_time = time.time() + float(timeout)
     while time.time() < end_time:
         st = get_latest_homing_status(motor_id)
+        print(
+            f"homing motor:{motor_id} status:{st}"
+            + "." * (int)(time.time() - end_time + timeout)
+            + " " * 12
+            + "\r",
+            end="",
+        )
         if st is not None and int(st) >= 3:
             return int(st)
         time.sleep(poll_interval)
@@ -109,6 +116,25 @@ def wait_for_booted(booted_ports, expected_ports, wait_time=10.0, steps=50):
     return False
 
 
+# --- Endpoints ---
+def start():
+    global osc_thread, stop_event
+    if osc_thread is None or not osc_thread.is_alive():
+        stop_event.clear()
+        osc_thread = Thread(target=osc_sender, args=(stop_event,), daemon=True)
+        osc_thread.start()
+        return True
+    return False
+
+
+def stop():
+    global stop_event, osc_thread
+    stop_event.set()
+    if osc_thread is not None:
+        osc_thread.join(timeout=2)
+        osc_thread = None
+
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     global osc_thread, stop_event
@@ -129,30 +155,10 @@ def index():
                         key,
                         type(params_full[key])(request.form.get(key, params_full[key])),
                     )
-            stop_event.clear()
-            osc_thread = Thread(target=osc_sender, args=(stop_event,), daemon=True)
-            osc_thread.start()
-            running = True
+            running = start()
         else:
             stop()
     return render_template("index.html", **render_params, running=running)
-
-
-@app.route("/halt", methods=["POST", "GET"])
-def halt():
-    clients = get_clients()
-    for client in clients:
-        client.send_message("/hardHiZ", [255])
-    stop()
-    return jsonify(result="OK")
-
-
-def stop():
-    global stop_event, osc_thread
-    stop_event.set()
-    if osc_thread is not None:
-        osc_thread.join(timeout=2)
-        osc_thread = None
 
 
 @app.route("/stop", methods=["POST"])
@@ -161,14 +167,28 @@ def stop_endpoint():
     return redirect(url_for("index"))
 
 
-@app.route("/setNeutral", methods=["POST", "GET"])
+def halt():
+    clients = get_clients()
+    for client in clients:
+        client.send_message("/hardHiZ", [255])
+    stop()
+    print(">>Emergency Stop<<<")
+    return
+
+
+@app.route("/halt", methods=["POST", "GET"])
+def halt_endpoint():
+    halt()
+    return jsonify(result="OK")
+
+
 def setNeutral():
     params_full = get_params_full()
-    # target_vals = [int(params.get("STROKE_OFFSET", 50000))] * params["NUM_SERVOS"]
     target_vals = [params_full.get("STROKE_OFFSET", 50000)] * params_full["NUM_SERVOS"]
     alpha = float(params_full.get("ALPHA", 0.2)) * 0.5
     interval = 1.0 / float(params_full["RATE_fps"])
-    while True:
+    stop()
+    while True and stop_event.is_set():
         filt_vals = filter_vals(target_vals, alpha)
         if get_prev_vals() is not None and filt_vals == get_prev_vals():
             break
@@ -178,6 +198,12 @@ def setNeutral():
     send_all_setTargetPositionList(filt_vals)
     time.sleep(0.1)
     gh_reset()
+    return
+
+
+@app.route("/setNeutral", methods=["POST", "GET"])
+def setNeutral_endpoint():
+    setNeutral()
     return jsonify(result="OK")
 
 
@@ -235,30 +261,36 @@ def homing_endpoint():
         return jsonify(result="NG", motorID=motor_id, homing_status=int(status))
 
 
-@app.route("/home_all", methods=["POST", "GET"])
 def home_all():
-
     params_full = get_params_full()
     motorIDs = range(1, params_full["NUM_SERVOS"] + 1)
-    # motorIDs = range(1, 2)
 
     setNeutral()
     for i in motorIDs:
-        time.sleep(1)
         status = homing(i)
         if status is None or int(status) != 3:
+            print(f"Homing failed for motor {i}, status: {status}")
             return (
-                jsonify(
-                    result="NG",
-                    motorID=i,
-                    homing_status=int(status) if status is not None else None,
-                ),
+                {
+                    "result": "NG",
+                    "motorID": i,
+                    "homing_status": int(status) if status is not None else None,
+                },
                 500,
             )
         setNeutral()
 
     print("All motors homed successfully.")
-    return jsonify(result="OK")
+    return {"result": "OK"}
+
+
+@app.route("/home_all", methods=["POST", "GET"])
+def home_all_endpoint():
+    result = home_all()
+    if isinstance(result, tuple):
+        body, code = result
+        return jsonify(body), code
+    return jsonify(result)
 
 
 @app.route("/set_param", methods=["POST"])
@@ -320,14 +352,14 @@ def init(enable=True):
     def on_booted(port, *args):
         booted_ports.add(port)
 
-    register_booted_callback(on_booted)
-    start_osc_receiver_thread()
-
-    expected_ports = 1
-
-    params_full = get_params_full()
-
     if enable:
+        register_booted_callback(on_booted)
+        start_osc_receiver_thread()
+
+        expected_ports = 1
+
+        params_full = get_params_full()
+
         for client in clients:
             client.send_message("/resetDevice", [])
         if not wait_for_booted(booted_ports, expected_ports):
@@ -354,6 +386,9 @@ def init(enable=True):
         set_prev_vals(
             [int(params_full.get("STROKE_OFFSET", 50000))] * params_full["NUM_SERVOS"]
         )
+    else:
+        stop()
+
     for client in clients:
         client.send_message("/enableServoMode", [255, enable])
         if not enable:
@@ -386,8 +421,7 @@ def release_endpoint():
 
 
 @app.route("/step", methods=["POST", "GET"])
-def step_func():
-
+def step():
     params_full = get_params_full()
     amp = int(request.form.get("amp", request.args.get("amp", 30000)))
     ch = request.form.get("ch", request.args.get("ch", "all"))
@@ -470,6 +504,21 @@ def listener_message_callback(address, *args):
     candidate = address.lstrip("/")
     if not args:
         print(f"Received OSC message with no args: {address}")
+        if candidate == "Start":
+            return start()
+        elif candidate == "Stop":
+            return stop()
+        elif candidate == "Init":
+            return init()
+        elif candidate == "Home":
+            return home_all()
+        elif candidate == "Neutral":
+            return setNeutral()
+        elif candidate == "Release":
+            return init(enable=False)
+        elif candidate == "Halt":
+            return halt()
+        print(f"not matching no-arg command for candidate '/{candidate}'")
         return
     candidate = address.lstrip("/")
     if candidate in params_mode:
@@ -541,11 +590,6 @@ if __name__ == "__main__":
             lan_ip = socket.gethostbyname(socket.gethostname())
         except Exception:
             lan_ip = None
-
-    if lan_ip:
-        print(f"Web UI URL: http://{lan_ip}:{web_port}")
-    else:
-        print(f"Web UI listening on http://{web_host}:{web_port}")
 
     socketio.run(app, host=web_host, port=web_port, use_reloader=False)
     # Disable reloader to avoid double-starting threads
