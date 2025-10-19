@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 from threading import Thread, Event
 import sys, time, socket, os
 from flask_socketio import SocketIO
+from logger_config import logger
 
 from osc_params import (
     get_params_full,
@@ -87,13 +88,7 @@ def wait_for_homing_complete(motor_id, timeout=12.0, poll_interval=0.05):
     end_time = time.time() + float(timeout)
     while time.time() < end_time:
         st = get_latest_homing_status(motor_id)
-        print(
-            f"homing motor:{motor_id} status:{st}"
-            + "." * (int)(time.time() - end_time + timeout)
-            + " " * 12
-            + "\r",
-            end="",
-        )
+        print("\rHoming status for motor %d: %s", motor_id, st, end="")
         if st is not None and int(st) >= 3:
             return int(st)
         time.sleep(poll_interval)
@@ -105,24 +100,27 @@ def wait_for_booted(booted_ports, expected_ports, wait_time=10.0, steps=50):
     elapsed = 0
     for _ in range(steps + 1):
         if len(booted_ports) >= expected_ports:
-            print(f">>Boot detected on port(s): {sorted(booted_ports)}, proceeding.")
+            logger.debug(
+                f">>Boot detected on port(s): {sorted(booted_ports)}, proceeding."
+            )
             return True
         time.sleep(wait_time / steps)
         elapsed += wait_time / steps
         sys.stdout.write(f"\rWaiting for boot... {elapsed:.1f}s ")
-    print(
+    logger.warning(
         f"\nERROR: /booted was not received from all {expected_ports} devices. Received from: {sorted(booted_ports)}"
     )
     return False
 
 
-# --- Endpoints ---
+# --- HTML Endpoints ---
 def start():
     global osc_thread, stop_event
     if osc_thread is None or not osc_thread.is_alive():
         stop_event.clear()
         osc_thread = Thread(target=osc_sender, args=(stop_event,), daemon=True)
         osc_thread.start()
+        logger.info("OSC Sender thread started.")
         return True
     return False
 
@@ -133,6 +131,7 @@ def stop():
     if osc_thread is not None:
         osc_thread.join(timeout=2)
         osc_thread = None
+    logger.info("OSC Sender thread stopped.")
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -172,7 +171,7 @@ def halt():
     for client in clients:
         client.send_message("/hardHiZ", [255])
     stop()
-    print(">>Emergency Stop<<<")
+    logger.info(">>Emergency Stop<<<")
     return
 
 
@@ -198,6 +197,7 @@ def setNeutral():
     send_all_setTargetPositionList(filt_vals)
     time.sleep(0.1)
     gh_reset()
+    logger.info("Set all motors to neutral position.")
     return
 
 
@@ -226,6 +226,17 @@ def homing(motor_id):
         vals = get_prev_vals() or [0] * params_full["NUM_SERVOS"]
         vals[motor_id - 1] = 0
         set_prev_vals(vals)
+        logger.debug(
+            "Homing completed for motor %d, status: %s",
+            motor_id,
+            "None" if status is None else status,
+        )
+    else:
+        logger.warning(
+            "Homing failed for motor %d, status: %s",
+            motor_id,
+            "None" if status is None else status,
+        )
     return status
 
 
@@ -269,7 +280,6 @@ def home_all():
     for i in motorIDs:
         status = homing(i)
         if status is None or int(status) != 3:
-            print(f"Homing failed for motor {i}, status: {status}")
             return (
                 {
                     "result": "NG",
@@ -280,7 +290,7 @@ def home_all():
             )
         setNeutral()
 
-    print("All motors homed successfully.")
+    logger.info("All motors homed successfully.")
     return {"result": "OK"}
 
 
@@ -341,7 +351,7 @@ def set_PID():
     clients = get_clients()
     for client in clients:
         client.send_message("/setServoParam", [255, kp, ki, kd])
-    print(f"Set servo PID: Kp={kp}, Ki={ki}, Kd={kd}")
+    logger.debug(f"Set servo PID: Kp={kp}, Ki={ki}, Kd={kd}")
 
 
 def init(enable=True):
@@ -401,7 +411,7 @@ def init_endpoint():
 
     params_full = get_params_full()
     if params_full.get("SEND_CLIENTS", True) is False:
-        print("SEND_CLIENTS is False, skipping boards init.")
+        logger.debug("SEND_CLIENTS is False, skipping boards init.")
         return jsonify(result="OK", info="SEND_CLIENTS is False, skipping boards init.")
     try:
         start_osc_receiver_thread()
@@ -466,12 +476,14 @@ def set_target_position():
         return jsonify(result="NG", error="Invalid or missing motorID/position"), 400
 
     client, local_id = get_motor_client_and_local_id(motor_id)
-    print(f"Debug: motor_id={motor_id}, local_id={local_id}, position={position}")
+    logger.debug(
+        f"Debug: motor_id={motor_id}, local_id={local_id}, position={position}"
+    )
     if client is None:
         return jsonify(result="NG", error="motorID out of range"), 400
 
     client.send_message("/setTargetPosition", [local_id, position])
-    print(f"Set {client._address} motor {local_id} to position {position}")
+    logger.debug(f"Set {client._address} motor {local_id} to position {position}")
     return jsonify(result="OK")
 
 
@@ -497,13 +509,14 @@ def get_target_position():
     return jsonify(result="OK", motorID=motor_id, position=position)
 
 
+# --- OSC Endpoints ---
 def listener_message_callback(address, *args):
     params_full = get_params_full()
     params_mode = get_params_mode()
 
     candidate = address.lstrip("/")
     if not args:
-        print(f"Received OSC message with no args: {address}")
+        logger.debug(f"Received OSC message with no args: {address}")
         if candidate == "Start":
             return start()
         elif candidate == "Stop":
@@ -518,9 +531,9 @@ def listener_message_callback(address, *args):
             return init(enable=False)
         elif candidate == "Halt":
             return halt()
-        print(f"not matching no-arg command for candidate '/{candidate}'")
+        logger.warning(f"not matching no-arg command for candidate '/{candidate}'")
         return
-    candidate = address.lstrip("/")
+
     if candidate in params_mode:
         key = candidate
         val = args[0]
@@ -532,7 +545,7 @@ def listener_message_callback(address, *args):
             save_params()
         except Exception:
             pass
-        print(f"Param '{key}' updated to: {val}")
+        logger.debug(f"Param '{key}' updated to: {val}")
         socketio.emit("param_update", {"key": key, "value": val})
     elif candidate in params_full:
         for key in ["MODE", "PORT", "NUM_SERVOS", "RATE_fps", "ALPHA"]:
@@ -546,10 +559,10 @@ def listener_message_callback(address, *args):
                     save_params()
                 except Exception:
                     pass
-                print(f"Param '{key}' updated to: {val}")
+                logger.debug(f"Param '{key}' updated to: {val}")
                 socketio.emit("param_update", {"key": key, "value": val})
     else:
-        print(f"No matching param key for candidate '{candidate}'")
+        logger.warning(f"No matching param key for candidate '{candidate}'")
 
 
 def handle_bundle(bundle_contents):
@@ -559,18 +572,16 @@ def handle_bundle(bundle_contents):
             key = addr.lstrip("/")
             if len(args) > 0:
                 params_to_update[key] = args[0]
-    print(f"Updating params from bundle: {params_to_update}")
+    logger.debug(f"Updating params from bundle: {params_to_update}")
     set_params(**params_to_update)
     for key in params_to_update:
-        if key == "MODE":
-            socketio.emit("param_update", {"key": key, "value": params_to_update[key]})
-    for key in params_to_update:
-        if key != "MODE":
-            socketio.emit("param_update", {"key": key, "value": params_to_update[key]})
+        socketio.emit("param_update", {"key": key, "value": params_to_update[key]})
 
 
+# --- MAIN ---
 if __name__ == "__main__":
-    print("Starting OSC demo...")
+    print("Starting Ritsudo Server...")
+    logger.info("Ritsudo Server is starting.")
 
     register_message_callback(listener_message_callback)
     register_bundle_callback(handle_bundle)

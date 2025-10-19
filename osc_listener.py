@@ -3,9 +3,10 @@ from pythonosc.osc_bundle import OscBundle
 from pythonosc.dispatcher import Dispatcher
 import socketserver
 import threading
+from logger_config import logger
 
 _message_callbacks = []
-_bundle_callbacks = []  # バンドル専用のコールバックリスト
+_bundle_callbacks = []
 
 
 def register_message_callback(cb):
@@ -22,7 +23,7 @@ class MyUDPHandler(socketserver.BaseRequestHandler):
         try:
             pkt = OscPacket(data)
         except Exception as e:
-            print("Invalid OSC packet:", e)
+            logger.error("Invalid OSC packet: %s", e)
             return
 
         is_bundle = False
@@ -32,30 +33,31 @@ class MyUDPHandler(socketserver.BaseRequestHandler):
             pass
 
         if is_bundle:
-            print(f"Received a bundle from PLAYER {pkt.messages}")
+            logger.info("Received a bundle with %d messages", len(pkt.messages))
             bundle_contents = []
             for timed in pkt.messages:
                 msg = timed.message
                 addr = msg.address
                 args = msg.params
                 bundle_contents.append((addr, args))
+                logger.debug(" → Bundle Message: %s %s", addr, args)
 
             for cb in _bundle_callbacks:
                 try:
                     cb(bundle_contents)
                 except Exception as e:
-                    print("Bundle callback error:", e)
+                    logger.error("Bundle callback error: %s", e)
         else:
             for timed in pkt.messages:
                 msg = timed.message
                 addr = msg.address
                 args = msg.params
-                print(f"Received a single message from PLAYER {addr} {args}")
+                logger.info("Received a single message: %s %s", addr, args)
                 for cb in _message_callbacks:
                     try:
                         cb(addr, *args)
                     except Exception as e:
-                        print("Callback error:", e)
+                        logger.error("Callback error: %s", e)
 
 
 def start_osc_listener(port):
@@ -63,7 +65,7 @@ def start_osc_listener(port):
         allow_reuse_address = True
 
     server = Server(("0.0.0.0", port), MyUDPHandler)
-    print(f"OSC listener from PLAYER started on port {port}")
+    logger.info(f"OSC listener from PLAYER started on port {port}")
     server.serve_forever()
 
 

@@ -8,12 +8,15 @@ from osc_params import (
 )
 from osc_modes import make_frame
 import sys, time, math, random
+from logger_config import logger
 
 prev_vals = None
 
 
 def get_prev_vals():
     global prev_vals
+    if prev_vals is None:
+        return [get_params_full().get("STROKE_OFFSET", 50000)] * NUM_SERVOS
     return prev_vals
 
 
@@ -44,14 +47,14 @@ def send_all_setTargetPositionList(vals):
                 client.send_message("/setTargetPositionList", vals_part)
                 sent_boards = True
             except Exception as e:
-                print(f"send error to {get_params_full()['HOSTS'][i]}:", e)
+                logger.error(f"send error to {get_params_full()['HOSTS'][i]}: {e}")
     if get_params_full().get("SEND_CLIENT_GH", False):
         client_gh = get_client_gh()
         try:
             client_gh.send_message("/setTargetPositionList", vals)
             sent_gh = True
         except Exception as e:
-            print(f"send error to {get_params_full()['HOST']}: {e}")
+            logger.error("send error to {}: {}".format(get_params_full()["HOST"], e))
     set_prev_vals(vals)
     return sent_boards, sent_gh
 
@@ -66,7 +69,7 @@ def gh_reset():
                 * [get_params_full().get("STROKE_OFFSET", 50000)],
             )
         except Exception as e:
-            print(f"send error to {get_params_full()['HOST']}: {e}")
+            logger.error("send error to {}: {}".format(get_params_full()["HOST"], e))
 
 
 def filter_vals(raw_vals, alpha):
@@ -103,8 +106,10 @@ def filter_vals(raw_vals, alpha):
             limited_relational = True
 
     if limited_relational or limited_absolute:
-        sys.stderr.write(
-            f"\n【LIMITED】: {'ABS ' if limited_absolute else ''}{'REL' if limited_relational else ''}\n"
+        logger.warning(
+            "Output limited: %s%s",
+            "ABS " if limited_absolute else "",
+            "REL" if limited_relational else "",
         )
 
     return vals
@@ -136,7 +141,8 @@ def osc_sender(stop_event):
             starting_motion = False
             mode = get_params_full().get("MODE")
             set_param_full("MODE", mode)
-            sys.stderr.write(f"\n=== MODE: {mode} ===\n")
+            print(f"\n=== MODE: {mode} ===\n")
+            logger.info("Switched to mode %s", mode)
             easing_duration = get_params_mode().get("EASING_DURATION", 1.0)
             if easing_duration > 0.0:
                 u = -easing_duration
@@ -163,7 +169,7 @@ def osc_sender(stop_event):
                     + get_params_mode().get("U_WIDTH", 1.0) / 2,
                 )
                 u_t_keep = 0.0
-                print(f"\nNew u_t_rate_target: {u_t_rate_target:.3f}")
+                logger.debug("New u_t_rate_target: {:.3f}".format(u_t_rate_target))
 
             if u_t_rate - u_t_rate_target > u_t_rate_accel:
                 u_t_rate -= u_t_rate_accel
@@ -197,8 +203,7 @@ def osc_sender(stop_event):
             f"1st8: {filt_vals[:8]}  min:{min(filt_vals):6.1f}  max:{max(filt_vals):6.1f}"
         )
         pad = " " * max(0, last_msg_len - len(msg) + 1)
-        sys.stderr.write(msg + pad)
-        sys.stderr.flush()
+        print(msg + pad, end="", flush=True)
         last_msg_len = len(msg)
 
         frame += 1

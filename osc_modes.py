@@ -1,6 +1,7 @@
 import math
 import numpy as np
 from osc_params import get_params_full, get_params_mode
+from logger_config import logger
 
 
 # -------------------------

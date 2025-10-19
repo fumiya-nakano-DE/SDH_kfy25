@@ -1,4 +1,5 @@
 import json
+from logger_config import logger
 
 PARAMS_FILE = "params.json"
 HOSTS = [f"10.0.0.10{i}" for i in range(0, 4)]
@@ -87,12 +88,12 @@ def set_params(**kwargs):
 
     for key, value in kwargs.items():
         if key in _params and key == "MODE":
-            print(f"Setting param '{key}' to: {value}")
+            logger.debug("Setting param '%s' to: %s", key, value)
             _params[key] = value
 
     for key, value in kwargs.items():
         if key in _params and key != "MODE":
-            print(f"Setting param '{key}' to: {value}")
+            logger.debug("Setting param '%s' to: %s", key, value)
             _params[key] = value
         elif key in _params.get("MODES", {}).get(str(_params.get("MODE", "1")), {}):
             mode_id = str(_params.get("MODE", "1"))
