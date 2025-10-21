@@ -9,22 +9,6 @@ kfy25 is a web-based OSC servo controller built with Flask and python-osc. It pr
 
 This README has been updated to reflect recent changes in the repository (Oct 2025): a parallel OSC listener helper in `sendosc.py`, a per-template FontAwesome toggle for offline use, and an added `STROKE_OFFSET` UI control.
 
-## Quick highlights (recent changes)
-
-- Added a background OSC listener helper to `sendosc.py` which can start an OSC receiver on port 50100 and print incoming messages while the sender continues to run.
-- The WebUI templates now include a small HTML-level toggle to enable/disable FontAwesome icons (`USE_FA` variable in `templates/index.html`) so the UI works offline when FA is disabled.
-- A new slider for `STROKE_OFFSET` was added to the WebUI (range -3000 .. 3000, step 100) so you can shift stroke center per-frame.
-
-## Features
-
-- WebUI for real-time control and parameter adjustment (BASE_FREQ, PHASE_RATE, STROKE_LENGTH, STROKE_OFFSET, LPF ALPHA, PID gains, etc.)
-- Multi-host support: distribute servo commands to multiple HUBs
-- Start/Stop OSC sending with smoothing/filtering
-- Homing, Init, Release, Step, ResetPos, SetTargetPosition, GetTargetPosition
-- OSC receive support: listens on multiple ports (default: 50100–50103) and maps feedback to motorID
-- Persistent parameter storage in `params.json`
-- Modular code: `osc_params.py`, `osc_modes.py`, `osc_sender.py`, `osc_receiver.py`, `send_osc_webUI.py`
-
 ## Requirements
 
 - Python 3.8+
@@ -56,35 +40,20 @@ http://localhost:5000/
 
 Notes: the main server entry is `osc_webUI/ritsudo_server.py` (replaces older `send_osc_webUI.py`). By default the app is configured to avoid running duplicate OSC receiver threads from the Flask reloader; use the file above to start the server directly.
 
-## Run (quick listener + sender)
+## 実装メモ
 
-If you want a lightweight script that both sends an initial message and listens in parallel on port 50100 and prints any incoming OSC messages, use `sendosc.py`.
+### モーターのマッピング(2025.10.21)
 
-Start it:
+内部的な`motorID`は、`1`から`NUM_SERVOS=31`までの値をとり、これを`get_motor_client_and_local_id()`で各基板に割り当てます
 
-```powershell
-python sendosc.py
-```
+計算された螺旋下から順の動作量`vals`の値をどの物理モータ(すなわち`motorID`)に割り当てるかは、`osc_params.py`内にハードコードする`MOTOR_POSITION_MAPPING`を使って変更できます。`MOTOR_POSITION_MAPPING`は`send_all_setTargetPositionList()`での送信の際のみに使われるローカル配列`mapped_vals`にのみ適用され、他のあらゆる操作は物理的な(=STEP800の)モータのIDを基準に動作します。
+なお、全軸ホーミング動作は`MOTOR_POSITION_MAPPING`の順で螺旋順に下から動作します。
 
-This will:
+### 全軸ホーミング(2025.10.21)
 
-- start a background OSC receiver on `0.0.0.0:50100` and print incoming messages with a `[OSC 50100]` prefix
-- send `/enableServoMode [1, 0]` to the configured HOST/PORT in the file
+POST`/home_all:5000`もしくはOSC`/Home[]:10000`で呼び出される全軸ホーミング動作`home_all()`では、応答がなかった(=STEP800からの戻り値が`3`にならなかった)軸はHardHiZになります。
 
-Keep the process running; press Ctrl+C to stop.
-
-If you only need to run the OSC receivers used by the full server stack, the Flask app (`send_osc_webUI.py`) already starts OSC receiver threads on the configured `OSC_RECV_PORTS` (defaults to `[50100,50101,50102,50103]`).
-
-
-## How OSC receive mapping works
-
-The receiver maps incoming `/position (local_id, position)` and `/homingStatus (local_id, status)` messages to global motor IDs by combining the receiving port's index (in `OSC_RECV_PORTS`) and `VALS_PER_HOST` (from `osc_params.py`). See `osc_webUI/osc_receiver.py` for implementation details.
-
-## Quick troubleshooting
-
-- If you don't see incoming OSC messages on the listener, ensure no firewall is blocking UDP on the listening port(s).
-- Verify the device's IP and that it's sending to the correct destination port (default 50100).
-- If running behind Docker/VM, ensure UDP port forwarding is configured.
+要するにホーミングに失敗した軸はそのままブラブラさせておくということです。
 
 ## File Structure
 
@@ -110,7 +79,7 @@ osc_webUI/
 The following diagram shows the logical components and their interactions (OSC send/receive flows):
 
 ```mermaid
-graph LR
+graph TD
     Browser[Browser UI]
     Flask(ritsudo_server.py) -- HTTP/HTML/JS/CSS --> Browser
     Flask -- websocket/rest --> Browser
@@ -247,4 +216,3 @@ PORT_SEND = 10000
 - `/Release []`
   - 全軸をSoft HiZ(脱磁)
 - `/Halt []`
-  - 緊急停止(Hard Hizで脱磁し、サーバ内の動作計算スレッドを停止)
