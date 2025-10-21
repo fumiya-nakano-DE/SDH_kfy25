@@ -2,6 +2,7 @@ from pythonosc.udp_client import SimpleUDPClient
 from osc_params import (
     VALS_PER_HOST,
     NUM_SERVOS,
+    MOTOR_POSITION_MAPPING,
     get_params_full,
     set_param_full,
     get_params_mode,
@@ -37,12 +38,24 @@ def get_client_gh():
 
 
 def send_all_setTargetPositionList(vals):
+
+    set_prev_vals(vals)
+
+    mapped_vals = [0] * NUM_SERVOS
+    motor_position_mapping = MOTOR_POSITION_MAPPING
+    for i in range(NUM_SERVOS):
+        mapped_vals[i] = (
+            vals[i] if motor_position_mapping == {} else vals[motor_position_mapping[i]]
+        )
+
     sent_boards = False
     sent_gh = False
     if get_params_full().get("SEND_CLIENTS", True):
         clients = get_clients()
         for i, client in enumerate(clients):
-            vals_part = vals[i * VALS_PER_HOST : (i + 1) * VALS_PER_HOST]
+
+            vals_part = mapped_vals[i * VALS_PER_HOST : (i + 1) * VALS_PER_HOST]
+
             try:
                 client.send_message("/setTargetPositionList", vals_part)
                 sent_boards = True
@@ -51,11 +64,11 @@ def send_all_setTargetPositionList(vals):
     if get_params_full().get("SEND_CLIENT_GH", False):
         client_gh = get_client_gh()
         try:
-            client_gh.send_message("/setTargetPositionList", vals)
+            client_gh.send_message("/setTargetPositionList", mapped_vals)
             sent_gh = True
         except Exception as e:
             logger.error("send error to {}: {}".format(get_params_full()["HOST"], e))
-    set_prev_vals(vals)
+
     return sent_boards, sent_gh
 
 

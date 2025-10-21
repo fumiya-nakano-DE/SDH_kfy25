@@ -1,34 +1,38 @@
 import json
 from logger_config import logger
 
+### Default parameters hard-coded in this file are used  ###
+### ONLY WHEN params.json IS NOT EXISTENT or INCOMPLETE. ###
+
 PARAMS_FILE = "params.json"
+
 HOSTS = [f"10.0.0.10{i}" for i in range(0, 4)]
-OSC_RECV_PORTS = [range(50100, 50104)]
+OSC_RECV_PORTS = [f"{i}" for i in range(50100, 50104)]
+
 VALS_PER_HOST = 8
 NUM_SERVOS = 32
+# MOTOR_POSITION_MAPPING = [i for i in range(NUM_SERVOS - 1, -1, -1)]
+MOTOR_POSITION_MAPPING = [i for i in range(NUM_SERVOS)]
 
-# Default parameters hard-coded in this file are used
-# only when _params.json is not existent or incomplete.
 
 DEFAULT_MODES = {}
-
 
 _params = {
     "MODE": "1",
     "MODES": DEFAULT_MODES.copy(),
+    "HOST": "127.0.0.1",
     "PORT": 50000,
+    "HOSTS": HOSTS,
+    "OSC_RECV_PORTS": OSC_RECV_PORTS,
     "NUM_SERVOS": NUM_SERVOS,
     "RATE_fps": 24,
     "ALPHA": 0.2,
-    "HOSTS": HOSTS,
-    "HOST": "127.0.0.1",
     "Kp": 0.06,
     "Ki": 0.0,
-    "Kd": 0.0,
+    "Kd": 0.01,
     "STROKE_OFFSET": 0,
     "SEND_CLIENTS": True,
     "SEND_CLIENT_GH": False,
-    "OSC_RECV_PORTS": OSC_RECV_PORTS,
 }
 
 

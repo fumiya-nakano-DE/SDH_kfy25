@@ -11,23 +11,6 @@ PORT_SEND = 10000
 
 client = SimpleUDPClient(HOST, PORT_SEND)
 
-
-def sendosc_message(message, args):
-    try:
-        client.send_message(message, args)
-        print(f"Message:{message}{args} sent successfully")
-    except Exception as e:
-        print("Error sending message:", e)
-
-
-def sendosc_bundle(bundle):
-    try:
-        client.send(bundle)
-        print(f"Bundle:{bundle} sent successfully")
-    except Exception as e:
-        print("Error sending bundle:", e)
-
-
 """
 def start_receiver(port):
     dispatcher = Dispatcher()
@@ -47,10 +30,29 @@ def start_receiver(port):
 """
 
 
+def sendosc_message(message, args):
+    try:
+        client.send_message(message, args)
+        print(f"Message:{message}{args} sent successfully")
+    except Exception as e:
+        print("Error sending message:", e)
+
+
+def sendosc_bundle(bundle):
+    try:
+        client.send(bundle)
+        print(f"Bundle:{bundle} sent successfully")
+    except Exception as e:
+        print("Error sending bundle:", e)
+
+
 def continuous():
     for i in range(0, 200, 2):
         sendosc_message("/U_AVERAGE", [i * 0.01])
         time.sleep(0.1)
+
+
+# =================================================
 
 
 def mode_change():
@@ -72,11 +74,17 @@ def set_mode_with_params(mode):
     msg.add_arg(1.0)
     bundle.add_content(msg.build())
 
-    print(f"Sending bundle: {bundle}")  # デバッグ用にバンドル内容を出力
+    print(f"Sending bundle: {bundle}")
     client.send(bundle.build())
 
 
+# =================================================
+
 if __name__ == "__main__":
-    continuous()
-    mode_change()
-    # set_mode_with_params("101")
+    sendosc_message("/RaiseError", [])
+
+    # sendosc_message("/Neutral", [])
+    # time.sleep(1)
+    # sendosc_message("/Start", [])
+    # time.sleep(3)
+    # sendosc_message("/Release", [])

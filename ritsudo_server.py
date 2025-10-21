@@ -11,6 +11,7 @@ from osc_params import (
     set_param_mode,
     set_params,
     save_params,
+    MOTOR_POSITION_MAPPING,
 )
 
 import osc_sender
@@ -70,6 +71,18 @@ def enable_servo(client, enable=True, local_id=None, broadcast=True):
         client.send_message("/enableServoMode", [255, flag])
     else:
         client.send_message("/enableServoMode", [local_id, flag])
+
+
+def disable_motor(motor_id):
+    client, local_id = get_motor_client_and_local_id(motor_id)
+    if client is None:
+        logger.error("disable_motor: motor_id %d out of range", motor_id)
+        return
+    client.send_message("/hardHiZ", [local_id])
+    logger.debug(
+        f"Disabled motor {motor_id} (client: {client._address}, local_id: {local_id})"
+    )
+    return
 
 
 def wait_for_latest_position(motor_id, timeout=1.0, poll_interval=0.05):
@@ -195,7 +208,6 @@ def setNeutral():
         set_prev_vals(filt_vals)
         time.sleep(interval)
     send_all_setTargetPositionList(filt_vals)
-    time.sleep(0.1)
     gh_reset()
     logger.info("Set all motors to neutral position.")
     return
@@ -274,23 +286,16 @@ def homing_endpoint():
 
 def home_all():
     params_full = get_params_full()
-    motorIDs = range(1, params_full["NUM_SERVOS"] + 1)
 
     setNeutral()
-    for i in motorIDs:
-        status = homing(i)
+    for i in range(params_full["NUM_SERVOS"]):
+        motorID = MOTOR_POSITION_MAPPING[i] + 1
+        status = homing(motorID)
         if status is None or int(status) != 3:
-            return (
-                {
-                    "result": "NG",
-                    "motorID": i,
-                    "homing_status": int(status) if status is not None else None,
-                },
-                500,
-            )
+            disable_motor(motorID)
         setNeutral()
 
-    logger.info("All motors homed successfully.")
+    logger.info("homing-all finished.")
     return {"result": "OK"}
 
 

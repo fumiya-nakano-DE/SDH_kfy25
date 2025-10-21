@@ -42,8 +42,8 @@ def setup_logger():
         def flush(self):
             pass
 
-    sys.stderr = StreamToLogger(logger, logging.ERROR)
-    logger.info("stderr is redirected to ritsudo_server.log")
+    # sys.stderr = StreamToLogger(logger, logging.ERROR)
+    # logger.info("stderr is redirected to ritsudo_server.log")
 
     return logger
 
