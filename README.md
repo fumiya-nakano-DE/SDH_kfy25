@@ -55,6 +55,14 @@ POST`/home_all:5000`もしくはOSC`/Home[]:10000`で呼び出される全軸ホ
 
 要するにホーミングに失敗した軸はそのままブラブラさせておくということです。
 
+### パラメータ固定(2025.10.21)
+
+`osc_params.py`内の`LOCKED_KEYS = ["STROKE_OFFSET", "STROKE_LENGTH"]`で指定されているパラメータは変更リクエストが握りつぶされます
+
+- `ritsudo-server.py`内でのsocket更新ルーチンは`LOCKED_KEYS`を見ていて、該当する場合は更新を送りません
+- `main.js`内`setFormEnabled()`では別途`disabled`が設定されています
+- これらの値を変えたい時は、`ritsudo-server.py`プロセスを止め、`params.json`を編集してください
+
 ## File Structure
 
 ```text

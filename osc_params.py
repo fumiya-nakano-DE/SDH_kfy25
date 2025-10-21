@@ -9,7 +9,7 @@ LOCKED_KEYS = ["STROKE_OFFSET", "STROKE_LENGTH"]
 PARAMS_FILE = "params.json"
 
 HOSTS = [f"10.0.0.10{i}" for i in range(0, 4)]
-OSC_RECV_PORTS = [f"{i}" for i in range(50100, 50104)]
+OSC_RECV_PORTS = [i for i in range(50100, 50104)]
 
 VALS_PER_HOST = 8
 NUM_SERVOS = 32

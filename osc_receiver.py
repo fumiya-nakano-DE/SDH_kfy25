@@ -93,7 +93,7 @@ def osc_receive_handler_factory(port):
 def start_osc_receiver(port):
     dispatcher = Dispatcher()
     dispatcher.set_default_handler(osc_receive_handler_factory(port))
-    server = BlockingOSCUDPServer(("0.0.0.0", port), dispatcher)
+    server = BlockingOSCUDPServer(("0.0.0.0", int(port)), dispatcher)
     logger.info(f"OSC Receiver from BOARD started on port %d", port)
     server.serve_forever()
 

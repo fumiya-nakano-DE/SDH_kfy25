@@ -3,9 +3,9 @@
   "MODES": {
     "101": {
       "NAME": "Simple sin",
-      "EASING_DURATION": 0.52,
-      "BASE_FREQ": 0.21,
-      "U_AVERAGE": 1.9800000190734863,
+      "EASING_DURATION": 1.0,
+      "BASE_FREQ": 0.56,
+      "U_AVERAGE": 1.0,
       "U_WIDTH": 0.0,
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
@@ -17,7 +17,7 @@
     },
     "102": {
       "NAME": "Azimuth slide",
-      "EASING_DURATION": 1.0,
+      "EASING_DURATION": 0.66,
       "BASE_FREQ": 0.4,
       "U_AVERAGE": 1.0,
       "U_WIDTH": 0,
@@ -234,10 +234,10 @@
     "10.0.0.103"
   ],
   "OSC_RECV_PORTS": [
-    "50100",
-    "50101",
-    "50102",
-    "50103"
+    50100,
+    50101,
+    50102,
+    50103
   ],
   "NUM_SERVOS": 32,
   "RATE_fps": 24,
@@ -246,8 +246,8 @@
   "Ki": 0.0,
   "Kd": 0.0,
   "STROKE_OFFSET": 50000,
-  "SEND_CLIENTS": false,
-  "SEND_CLIENT_GH": true,
+  "SEND_CLIENTS": true,
+  "SEND_CLIENT_GH": false,
   "LIMIT_ABSOLUTE": 120000,
   "LIMIT_RELATIONAL": 173200,
   "STROKE_LENGTH": 50000
