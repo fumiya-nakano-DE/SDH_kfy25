@@ -10,8 +10,8 @@ from osc_params import (
     set_param_full,
     set_param_mode,
     set_params,
-    save_params,
     MOTOR_POSITION_MAPPING,
+    LOCKED_KEYS,
 )
 
 import osc_sender
@@ -316,24 +316,21 @@ def set_param():
     for key in request.form:
         val = request.form[key]
         if key in ("SEND_CLIENTS", "SEND_CLIENT_GH"):
-            params_full[key] = val.lower() == "true"
+            set_param_full(key, val.lower() == "true")
         elif key in params_full["MODES"][mode_id]:
             try:
-                params_full["MODES"][mode_id][key] = type(
-                    params_full["MODES"][mode_id][key]
-                )(val)
+                set_param_mode(key, type(params_full["MODES"][mode_id][key])(val))
             except Exception as e:
                 return jsonify(result="NG", error=str(e)), 400
         elif key in params_full:
             try:
-                params_full[key] = type(params_full[key])(val)
+                set_param_full(key, type(params_full[key])(val))
                 if key in ("Kp", "Ki", "Kd"):
                     updated_pid = True
             except Exception as e:
                 return jsonify(result="NG", error=str(e)), 400
     if updated_pid:
         set_PID()
-    save_params()
     return jsonify(result="OK")
 
 
@@ -342,8 +339,7 @@ def set_mode():
     mode = request.form.get("MODE")
     params_full = get_params_full()
     if mode is not None and mode in params_full["MODES"]:
-        params_full["MODE"] = mode
-        save_params()
+        set_param_full("MODE", mode)
         return jsonify(result="OK")
     return jsonify(result="NG", error="No mode"), 400
 
@@ -514,6 +510,11 @@ def get_target_position():
 
 
 # --- OSC Endpoints ---
+def socket_update_param(key, value):
+    if key not in LOCKED_KEYS:
+        socketio.emit("param_update", {"key": key, "value": value})
+
+
 def listener_message_callback(address, *args):
     params_full = get_params_full()
     params_mode = get_params_mode()
@@ -545,43 +546,39 @@ def listener_message_callback(address, *args):
         val = args[0]
         try:
             set_param_mode(key, type(params_mode[key])(val))
-        except Exception:
-            params_mode[key] = val
-        try:
-            save_params()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to update param_mode '{key}': {e}")
         logger.debug(f"Param '{key}' updated to: {val}")
-        socketio.emit("param_update", {"key": key, "value": val})
+        socket_update_param(key, val)
     elif candidate in params_full:
         for key in ["MODE", "PORT", "NUM_SERVOS", "RATE_fps", "ALPHA"]:
             if candidate == key:
                 val = args[0]
                 try:
                     set_param_full(key, type(params_full[key])(val))
-                except Exception:
-                    params_full[key] = val
-                try:
-                    save_params()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Failed to update param_full '{key}': {e}")
                 logger.debug(f"Param '{key}' updated to: {val}")
-                socketio.emit("param_update", {"key": key, "value": val})
+                socket_update_param(key, val)
     else:
         logger.warning(f"No matching param key for candidate '{candidate}'")
 
 
 def handle_bundle(bundle_contents):
-    params_to_update = {}
     for addr, args in bundle_contents:
         if addr.startswith("/"):
             key = addr.lstrip("/")
             if len(args) > 0:
-                params_to_update[key] = args[0]
-    logger.debug(f"Updating params from bundle: {params_to_update}")
-    set_params(**params_to_update)
-    for key in params_to_update:
-        socketio.emit("param_update", {"key": key, "value": params_to_update[key]})
+                value = args[0]
+                try:
+                    if key in get_params_full():
+                        set_param_full(key, value)
+                    elif key in get_params_mode():
+                        set_param_mode(key, value)
+                    logger.debug(f"Updated param '{key}' to: {value}")
+                    socket_update_param(key, value)
+                except Exception as e:
+                    logger.warning(f"Failed to update param '{key}': {e}")
 
 
 # --- MAIN ---

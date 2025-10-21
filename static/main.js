@@ -36,7 +36,15 @@ function customSubmit() {
 function setFormEnabled(enabled) {
     ["mainForm", "independentControllerForm"].forEach(formId => {
         const form = document.getElementById(formId);
-        if (form) Array.from(form.elements).forEach(el => { el.disabled = !enabled; });
+        if (form) {
+            Array.from(form.elements).forEach(el => {
+                if (el.dataset.param === "STROKE_OFFSET" || el.dataset.param === "STROKE_LENGTH") {
+                    el.disabled = true;
+                } else {
+                    el.disabled = !enabled;
+                }
+            });
+        }
     });
     const loader = document.getElementById('form-loading');
     if (loader) loader.style.display = enabled ? 'none' : 'inline-block';
@@ -251,6 +259,8 @@ window.addEventListener('DOMContentLoaded', function () {
 
     const motorIdInput = document.getElementById('motor-id-input');
     if (motorIdInput) motorIdInput.addEventListener('change', getTargetPosition);
+
+    setFormEnabled(true);
 
     document.querySelectorAll('output').forEach(formatOutputWithCommas);
 });

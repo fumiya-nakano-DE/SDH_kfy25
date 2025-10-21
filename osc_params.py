@@ -4,6 +4,8 @@ from logger_config import logger
 ### Default parameters hard-coded in this file are used  ###
 ### ONLY WHEN params.json IS NOT EXISTENT or INCOMPLETE. ###
 
+LOCKED_KEYS = ["STROKE_OFFSET", "STROKE_LENGTH"]
+
 PARAMS_FILE = "params.json"
 
 HOSTS = [f"10.0.0.10{i}" for i in range(0, 4)]
@@ -62,21 +64,30 @@ def load_params():
 
 
 def get_params_full() -> dict:
-    return _params
+    return _params.copy()
 
 
 def get_params_mode() -> dict:
-    return _params.get("MODES", {}).get(str(_params.get("MODE", "1")), {})
+    return _params.get("MODES", {}).get(str(_params.get("MODE", "1")), {}).copy()
+
+
+def key_locked(key):
+    return key in LOCKED_KEYS
 
 
 def set_param_full(key, value):
     global _params
+    if key_locked(key):
+        logger.warning("Attempted to set locked param '%s'", key)
+        return
     _params[key] = value
     save_params()
-    return
 
 
 def set_param_mode(key, value):
+    if key_locked(key):
+        logger.warning("Attempted to set locked mode param '%s'", key)
+        return
     global _params
     mode_id = str(_params.get("MODE", "1"))
     if "MODES" not in _params:
@@ -97,7 +108,10 @@ def set_params(**kwargs):
             _params[key] = value
 
     for key, value in kwargs.items():
-        if key in _params and key != "MODE":
+        if key_locked(key):
+            logger.warning("Attempted to set locked one of params '%s'", key)
+            return
+        elif key in _params and key != "MODE":
             logger.debug("Setting param '%s' to: %s", key, value)
             _params[key] = value
         elif key in _params.get("MODES", {}).get(str(_params.get("MODE", "1")), {}):

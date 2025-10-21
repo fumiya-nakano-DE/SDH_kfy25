@@ -4,7 +4,6 @@ from osc_params import (
     NUM_SERVOS,
     MOTOR_POSITION_MAPPING,
     get_params_full,
-    set_param_full,
     get_params_mode,
 )
 from osc_modes import make_frame
@@ -153,7 +152,6 @@ def osc_sender(stop_event):
         if mode != get_params_full().get("MODE") or starting_motion:
             starting_motion = False
             mode = get_params_full().get("MODE")
-            set_param_full("MODE", mode)
             print(f"=== MODE: {mode} ===")
             logger.info("Switched to mode %s", mode)
             easing_duration = get_params_mode().get("EASING_DURATION", 1.0)
