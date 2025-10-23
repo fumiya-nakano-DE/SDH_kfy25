@@ -25,7 +25,9 @@ This document provides a detailed representation of the modes defined in `params
 ### `101` Simple Sin ★★☆
 
 単純Sin波
+
 `vals[i] ∝ STROKE_LENGTH * sin(t + PHASE_RATE * i * t)`
+
 ![101_thumbnail](readme/101.png)
 
 - `PHASE_RATE`
@@ -34,6 +36,7 @@ This document provides a detailed representation of the modes defined in `params
 ### `102` Azimuth Slide ★★☆
 
 Azimuth(=水平方位角)ごとに位相を揃えたSin波
+
 `vals[i] ∝ STROKE_LENGTH * sin(t + azimuth_phase(i) * t)`
 
 ![102_thumbnail](readme/102.png)
@@ -44,6 +47,7 @@ Azimuth(=水平方位角)ごとに位相を揃えたSin波
 ### `111` Coned Sin ★★☆
 
 鉛直方向にConic Curveのamplitudeをかけた`101`
+
 `vals[i] ∝ <101> * sin(t + azimuth_phase(i) * t)`
 ![111_thumbnail](readme/111.png)
 
@@ -56,6 +60,7 @@ Azimuth(=水平方位角)ごとに位相を揃えたSin波
 ### `112` Coned Azimuth Slide ★★☆
 
 鉛直方向にConic Curveのamplitudeをかけた`102`
+
 `vals[i] ∝ <102>> * sin(t + azimuth_phase(i) * t)`
 [112_thumbnail](readme/112.png)
 
@@ -68,6 +73,7 @@ Azimuth(=水平方位角)ごとに位相を揃えたSin波
 ### `121` Sined Sin ★☆☆
 
 Sinのamplitudeをかけた`101`
+
 `vals[i] ∝ <101> * ((1-AMP_PARAM_A) + AMP_PARAM_A * sin( AMP_FREQ * t + AMP_PARAM_B * i * t)`
 ![121_thumbnail](readme/121.png)
 
@@ -83,6 +89,7 @@ Sinのamplitudeをかけた`101`
 ### `122` Sined Azimuth slide ★☆☆
 
 Sinのamplitudeをかけた`102`
+
 `vals[i] ∝ <102> * ((1-AMP_PARAM_A) + AMP_PARAM_A * sin( AMP_FREQ * t + AMP_PARAM_B * i * t)`
 [122_thumbnail](readme/122.png)
 
@@ -98,6 +105,7 @@ Sinのamplitudeをかけた`102`
 ### `151` Gauss Windowed Sin ★★☆
 
 時間方向にガウス窓のかかった`101`
+
 `vals[i] ∝ <101> * amp_gaussian_window(t, AMP_FREQ, AMP_PARAM_A)`
 
 ![151_thumbnail](readme/151.png)
@@ -113,6 +121,7 @@ Sinのamplitudeをかけた`102`
 ### `151` Gauss Windowed Azimuth Slide ★★☆
 
 時間方向にガウス窓のかかった`102`
+
 `vals[i] ∝ <102> * amp_gaussian_window(t, AMP_FREQ, AMP_PARAM_A)`
 [152_thumbnail](readme/152.png)
 
@@ -137,6 +146,7 @@ Sinのamplitudeをかけた`102`
 ### `4xx` damping oscilation
 
 **減衰系のモードはワンショットモーション**です
+
 `t = 0`直後に最も動きが大きく、減衰後はほぼ動かないままになります
 
 - `AMP_FREQ`
@@ -149,7 +159,9 @@ Sinのamplitudeをかけた`102`
 ### `501` [DEPLICATED] emerging sin
 
 ***振幅モードemergingは非推奨***です
+
 徐々に振幅が大きくなる`101`
+
 `STROKE_LENGTH`のロックを解除し、`101`の`STROKE_LENGTH`を変化させるのが推奨
 ![501_thumbnail](readme/501.png)
 
@@ -159,7 +171,9 @@ Sinのamplitudeをかけた`102`
 ### `502` [DEPLICATED] emerging Azimuth Slide
 
 ***振幅モードemergingは非推奨***です
+
 徐々に振幅が大きくなる`102`
+
 `STROKE_LENGTH`のロックを解除し、`102`の`STROKE_LENGTH`を変化させるのが推奨
 [502_thumbnail](readme/502.png)
 
@@ -212,68 +226,82 @@ graph LR
     subgraph Modes
         mode101["101 Simple sin"]
         mode102["102 Azimuth slide"]
-        mode103["103 Coned Azimuth slide"]
-        mode201["201 Sined Azimuth slide"]
+        mode111["111 Coned Sin"]
+        mode112["112 Coned Azimuth Slide"]
+        mode121["121 Sined Sin"]
+        mode122["122 Sined Azimuth Slide"]
+        mode151["151 Gauss Windowed Sin"]
+        mode152["152 Gauss Windowed Azimuth Slide"]
         mode301["301 Soliton wave"]
-        mode302["302 Soliton Azimuth Rectangular"]
-        mode303["303 Soliton Azimuth Gaussian"]
         mode305["305 Damped oscillation"]
         mode401["401 Damped oscillation locational"]
         mode402["402 Damped oscillation displace"]
-        mode501["501 Emerging azimuth"]
-        mode502["502 Emerging sin"]
+        mode501["501 Emerging sin"]
+        mode502["502 Emerging Azimuth Slide"]
         mode601["601 Locational sin"]
+        mode602["602 Locational Azimuth Slide"]
         mode701["701 Random"]
         mode702["702 Random sin"]
         mode703["703 Random sin freq"]
     end
 
-    subgraph Core Public Functions
+    subgraph Functions
         sin["sin"]
         azimuth["azimuth"]
-        azimuth_window_gaussian["azimuth_window_gaussian"]
-        azimuth_window_rectangular["azimuth_window_rectangular"]
+        cone["cone"]
+        amp_sin["amp_sin"]
+        amp_gaussian_window["amp_gaussian_window"]
         soliton["soliton"]
+        damped_oscillation["damped_oscillation"]
+        damped_oscillation_locational["damped_oscillation_locational"]
+        damped_oscillation_displace["damped_oscillation_displace"]
         random["random"]
         random_sin["random_sin"]
         random_sin_freq["random_sin_freq"]
+        amp_locational
+        amp_emerging
     end
 
     subgraph Parameters
+        stroke_length_param["STROKE_LENGTH"]
         base_freq_param["BASE_FREQ"]
         phase_rate_param["PHASE_RATE"]
-        stroke_length_param["STROKE_LENGTH"]
         param_a["PARAM_A"]
         param_b["PARAM_B"]
-        amp_mode_param["AMP_MODE"]
         amp_freq_param["AMP_FREQ"]
         amp_param_a["AMP_PARAM_A"]
+        amp_param_b["AMP_PARAM_B"]
+        location_degree_param["LOCATION_DEGREE"]
+        location_height_param["LOCATION_HEIGHT"]
     end
 
     %% Mode to Function Relationships
     mode101 --> sin
-    mode101 -.-> solid
     mode102 --> azimuth
-    mode102 -.-> solid
-    mode103 --> azimuth
-    mode103 -.-> cone
-    mode201 --> azimuth
-    mode201 -.-> amp_sin
+    mode111 --> sin
+    mode111 -.-> cone
+    mode112 --> azimuth
+    mode112 -.-> cone
+    mode121 --> sin
+    mode121 -.-> amp_sin
+    mode122 --> azimuth
+    mode122 -.-> amp_sin
+    mode151 --> sin
+    mode151 -.-> amp_gaussian_window
+    mode152 --> azimuth
+    mode152 -.-> amp_gaussian_window
     mode301 --> soliton
-    mode302 --> azimuth_window_rectangular
-    mode303 --> azimuth_window_gaussian
-    mode305 --> azimuth
-    mode305 -.-> damped_oscillation
-    mode401 --> azimuth
-    mode401 -.-> damped_oscillation_locational
-    mode402 --> azimuth
-    mode402 -.-> damped_oscillation_displace
-    mode501 --> azimuth
+    mode305 --> damped_oscillation
+    mode401 --> damped_oscillation_locational
+    mode402 --> damped_oscillation_displace
+    mode501 --> sin
     mode501 -.-> amp_emerging
-    mode502 --> sin
+    mode502 --> azimuth
     mode502 -.-> amp_emerging
     mode601 --> sin
     mode601 -.-> amp_locational
+    mode602 --> azimuth
+    mode602 -.-> amp_locational
     mode701 --> random
     mode702 --> random_sin
     mode703 --> random_sin_freq
@@ -283,25 +311,29 @@ graph LR
     sin --> phase_rate_param
     azimuth --> base_freq_param
     azimuth --> phase_rate_param
-    azimuth_window_gaussian --> base_freq_param
-    azimuth_window_gaussian --> param_a
-    azimuth_window_gaussian --> param_b
-    azimuth_window_rectangular --> base_freq_param
-    azimuth_window_rectangular --> param_a
-    azimuth_window_rectangular --> param_b
-    soliton --> base_freq_param
+    cone --> amp_param_a
+    amp_sin --> amp_freq_param
+    amp_sin --> amp_param_a
+    amp_sin --> amp_param_b
+    amp_gaussian_window --> amp_freq_param
+    amp_gaussian_window --> amp_param_a
     soliton --> param_a
     soliton --> param_b
-    amp_sin --> amp_freq_param
+    damped_oscillation --> amp_freq_param
+    damped_oscillation --> param_a
+    damped_oscillation_locational --> amp_freq_param
+    damped_oscillation_locational --> amp_param_a
+    damped_oscillation_locational --> location_degree_param
+    damped_oscillation_locational --> location_height_param
+    damped_oscillation_displace --> amp_freq_param
+    damped_oscillation_displace --> param_a
+    damped_oscillation_displace --> amp_param_a
+    damped_oscillation_displace --> location_degree_param
+    damped_oscillation_displace --> location_height_param
+    random --> base_freq_param
     random_sin --> base_freq_param
     random_sin_freq --> base_freq_param
     random_sin_freq --> amp_freq_param
-    damped_oscillation --> base_freq_param
-    damped_oscillation --> param_a
-    damped_oscillation_locational --> base_freq_param
-    damped_oscillation_locational --> param_a
-    damped_oscillation_locational --> amp_param_a
-    damped_oscillation_displace --> base_freq_param
-    damped_oscillation_displace --> param_a
-    damped_oscillation_displace --> amp_param_a
+    amp_locational --> location_degree_param
+    amp_locational --> location_height_param
 ```
