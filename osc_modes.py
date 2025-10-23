@@ -3,6 +3,8 @@ import numpy as np
 from osc_params import get_params_full, get_params_mode
 from logger_config import logger
 
+STROKE_LENGTH_LIMIT_HARDCODED = 50000
+
 
 # -------------------------
 # Amplitude modulation
@@ -43,9 +45,15 @@ def amp_sin(t, num_servos):
 
 def amplitude_modulation(t, num_servos):
     amp_func = globals().get(str(get_params_mode().get("AMP_MODE")), solid)
-    return amp_func(t, num_servos) * float(
-        get_params_mode().get("STROKE_LENGTH", 50000)
+    stroke_length = float(get_params_mode().get("STROKE_LENGTH", 20000))
+    stroke_length_limit = float(
+        get_params_mode().get(
+            "STROKE_LENGTH_LIMIT_SPECIFIC",
+            get_params_full().get("STROKE_LENGTH_LIMIT", STROKE_LENGTH_LIMIT_HARDCODED),
+        )
     )
+    stroke_length = max(min(stroke_length, stroke_length_limit), 0)
+    return amp_func(t, num_servos) * stroke_length
 
 
 def amp_gaussian_window(t, num_servos):

@@ -4,6 +4,18 @@ function formatOutputWithCommas(outputElement) {
     const value = parseFloat(outputElement.textContent);
     if (!isNaN(value)) {
         outputElement.textContent = value.toLocaleString();
+
+        const relatedInputId = outputElement.id.replace('_out', '');
+        const relatedInput = document.getElementById(relatedInputId);
+        if (relatedInput) {
+            const min = parseFloat(relatedInput.min);
+            const max = parseFloat(relatedInput.max);
+            if (!isNaN(min) && !isNaN(max) && (value < min || value > max)) {
+                outputElement.style.color = 'red';
+            } else {
+                outputElement.style.color = '';
+            }
+        }
     }
 }
 
@@ -38,10 +50,15 @@ function setFormEnabled(enabled) {
         const form = document.getElementById(formId);
         if (form) {
             Array.from(form.elements).forEach(el => {
-                if (el.dataset.param === "STROKE_OFFSET" || el.dataset.param === "STROKE_LENGTH") {
+                if (el.dataset.param === "STROKE_OFFSET") {
                     el.disabled = true;
                 } else {
                     el.disabled = !enabled;
+                    if (el.type === "output") {
+                        const relatedInputId = el.id.replace('_out', '');
+                        const relatedInput = document.getElementById(relatedInputId);
+                        if (relatedInput && (el.value == "" || isNaN(el.value))) relatedInput.disabled = true;
+                    }
                 }
             });
         }

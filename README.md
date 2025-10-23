@@ -59,7 +59,7 @@ Notes: the main server entry is `osc_webUI/ritsudo_server.py` (replaces older `s
 
 ---
 
-## [モードのリスト](modes.md)
+## [>>>モードのリスト<<<](modes.md)
 
 ## 実装メモ
 
@@ -76,13 +76,59 @@ POST`/home_all:5000`もしくはOSC`/Home[]:10000`で呼び出される全軸ホ
 
 要するにホーミングに失敗した軸はそのままブラブラさせておくということです。
 
-### パラメータ固定(2025.10.21)
+### パラメータ固定(2025.10.21)->(2025.10.23)
 
-`osc_params.py`内の`LOCKED_KEYS = ["STROKE_OFFSET", "STROKE_LENGTH"]`で指定されているパラメータは変更リクエストが握りつぶされます
+`osc_params.py`内の`LOCKED_KEYS = ["STROKE_OFFSET"]`で指定されているパラメータは変更リクエストが握りつぶされます
 
 - `ritsudo-server.py`内でのsocket更新ルーチンは`LOCKED_KEYS`を見ていて、該当する場合は更新を送りません
 - `main.js`内`setFormEnabled()`では別途`disabled`が設定されています
 - これらの値を変えたい時は、`ritsudo-server.py`プロセスを止め、`params.json`を編集してください
+  
+～～～
+
+- **`STROKE_LENGTH`のロックは解除されました**
+- **変更できないパラメータはwebUIのスライダーがdisableされるようになりました**
+- webUIのスライダー範囲を超える値が(OSC等で)設定された場合は値が赤くハイライトされるようになりました
+
+### 速度上限(2025.10.23)
+
+絶対速度の上限`LIMIT_SPEED`がかかるようになりました
+
+### 振幅設定値上限(2025.10.23)
+
+`STROKE_OFFSET`の最大値`50000`がハードコードされました
+
+- 上限を超えた値をOSCやwebUIから設定すること自体は可能で、動作計算時に上限値に丸められます
+  - `params.json`を手で編集した時に誤記する可能性があるため、終段で制限しています
+- グローバルパラメータ`STROKE_LENGTH_LIMIT`で上書きできます
+- モード固有パラメータ`STROKE_LENGTH_LIMIT_SPECIFIC`でさらに上書きできます
+
+### 同じModeの連続使用(2025.10.23)
+
+OSCで`"MODE"`パラメータを含むメッセージを送信した際は、以前のモードに関わらず冒頭から再生されるようになりました
+
+### OSC_Speaker(2025.10.23)
+
+ローカルホスト`10000`への`/GetAverageSpeed[]` `/GetSpeed[]` `/GetPosition[]`に対して、ローカルホスト`10001`に`/AverageSpeed[(int)speed]` `/Speed[(int)Speed[NUM_SERVOS]]` `/Position[(int)Position[NUM_SERVOS]]`が返るようになりました
+
+## トラブルシューティング
+
+### 実機が動かない
+
+- ターゲットに`boards`にチェックが入っていますか？
+- `Init`した際にSTEP800の赤LEDは点灯しますか？
+  - STEP800の電源を再投入する
+  - ターミナルでSTEP800にpingを打ってみる
+
+### Grasshopperが動かない
+
+- ターゲット`gh`にチェックが入っていますか？
+
+### 動かない
+
+- `Start`していますか？
+- `STROKE_LENGTH`が`0`ではありませんか？
+- `BASE_FREQ`や`U_AVERAGE`が`0`ではありませんか？
 
 ## File Structure
 
@@ -245,3 +291,4 @@ PORT_SEND = 10000
 - `/Release []`
   - 全軸をSoft HiZ(脱磁)
 - `/Halt []`
+  - 緊急停止

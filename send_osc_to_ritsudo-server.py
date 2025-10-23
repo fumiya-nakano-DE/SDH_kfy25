@@ -8,10 +8,11 @@ import time
 
 HOST = "127.0.0.1"
 PORT_SEND = 10000
+PORT_RECEIVE = 10001  # 修正: 送信元のポートと一致させる
 
 client = SimpleUDPClient(HOST, PORT_SEND)
 
-"""
+
 def start_receiver(port):
     dispatcher = Dispatcher()
 
@@ -27,7 +28,6 @@ def start_receiver(port):
     t.start()
     print(f"OSC Receiver started on {HOST}:{port} (printing incoming messages)")
     return server, t
-"""
 
 
 def sendosc_message(message, args):
@@ -81,10 +81,28 @@ def set_mode_with_params(mode):
 # =================================================
 
 if __name__ == "__main__":
-    sendosc_message("/RaiseError", [])
+    start_receiver(PORT_RECEIVE)
+    # sendosc_message("/RaiseError", [])
 
     # sendosc_message("/Neutral", [])
     # time.sleep(1)
     # sendosc_message("/Start", [])
     # time.sleep(3)
     # sendosc_message("/Release", [])
+
+    # set_mode_with_params("421")
+    # time.sleep(5)
+    # set_mode_with_params("421")
+
+    # sendosc_message("/STROKE_LENGTH", [500000])
+    # time.sleep(3)
+    sendosc_message("/GetAverageSpeed", [])
+    sendosc_message("/GetSpeed", [])
+    sendosc_message("/GetPosition", [])
+
+    try:
+        print("Running... press Ctrl-C to stop")
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Interrupted by user, exiting.")

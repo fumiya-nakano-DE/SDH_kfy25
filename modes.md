@@ -6,17 +6,31 @@ This document provides a detailed representation of the modes defined in `params
 
 ---
 
+## Motion related Global Params
+
+| Command           | Description                                                                                                                                                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EASING_DURATION` | モード切替直後のイージング時間を秒で指定します。                                                                                                                                                                           |
+| `BASE_FREQ`       | 動作の速さの基準値を Hz で指定します。                                                                                                                                                                                     |
+| `U_AVERAGE`       | 実時刻 `t` に対する可変時刻 `u` の進みの速さの倍率`dudt`の平均値を指定します。負の`u` は強制的に`0`に丸められます。**このパラメータをスライドさせれば動きの速さを連続的に変えられます**                                    |
+| `U_WIDTH`         | 実時刻 `t` に対する可変時刻 `u` の進みの速さの倍率のランダム幅 (全幅 * 1/2) を指定します。`0` にすると `U_AVERAGE` での設定で固定されます。ランダムは `U_AVERAGE - U_WIDTH ~ U_AVERAGE + U_WIDTH` の間で単純に分布します。 |
+| `U_FREQUENTNESS`  | `u` (正確には `dudt`) をランダム変更する時間間隔を Hz で指定します。`0` にすると `U_AVERAGE` での設定で固定されます。変更タイミングにはランダムを入れていません(例: `0.1` に設定したら 10 秒間隔で `dudt` が変わる)。      |
+| `DIRECTION`       | 位相の進む方向を逆にできます。                                                                                                                                                                                             |
+
+
 ## Mode Specific Params
 
-| Parameter                   | Description                                        |
-| --------------------------- | -------------------------------------------------- |
-| `BASE_FREQ`                 | Base frequency for oscillations.                   |
-| `STROKE_LENGTH`             | Length of the stroke for oscillatory motion.       |
-| `PHASE_RATE`                | 鉛直方向に位相をオフセットしていく度合い           |
-| `PARAM_A`  ,`PARAM_B`       | Custom parameters for mode-specific calculations.  |
-| `AMP_MODE`                  | Amplitude mode (e.g., `solid`, `cone`, `amp_sin`). |
-| `AMP_FREQ`                  | Frequency of amplitude modulation.                 |
-| `AMP_PARAM_A`,`AMP_PARAM_B` | Custom parameter for amplitude modulation.         |
+| Parameter                            | Description                                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `BASE_FREQ`                          | Base frequency for oscillations.                                                           |
+| `STROKE_LENGTH`                      | Length of the stroke for oscillatory motion.**動きの大きさはこのパラメータで変えられます** |
+| `PHASE_RATE`                         | 鉛直方向に位相をオフセットしていく度合い                                                   |
+| `PARAM_A`  ,`PARAM_B`                | Custom parameters for mode-specific calculations.                                          |
+| `AMP_MODE`                           | Amplitude mode (e.g., `solid`, `cone`, `amp_sin`).                                         |
+| `AMP_FREQ`                           | Frequency of amplitude modulation.                                                         |
+| `AMP_PARAM_A`,`AMP_PARAM_B`          | Custom parameter for amplitude modulation.                                                 |
+| `LOCATION_DEGREE`, `LOCATION_HEIGHT` | "場所"を決めるパラメータ                                                                   |
+|                                      |
 
 ---
 
@@ -156,6 +170,10 @@ Sinのamplitudeをかけた`102`
 - `AMP_PARAM_B`
   - 鉛直方向伝搬速度
 
+#### `40x` 全体が単純に減衰振動 ★☆☆
+#### `42x` "場所"に感度のある減衰振動 ★★★
+#### `43x` "場所"と"向き"に感度のある減衰振動 ☆☆☆
+
 ### `501` [DEPLICATED] emerging sin
 
 ***振幅モードemergingは非推奨***です
@@ -163,7 +181,7 @@ Sinのamplitudeをかけた`102`
 徐々に振幅が大きくなる`101`
 
 `STROKE_LENGTH`のロックを解除し、`101`の`STROKE_LENGTH`を変化させるのが推奨
-![501_thumbnail](readme/501.png)
+[501_thumbnail](readme/501.png)
 
 - `AMP_PARAM_A`
   - solitonの時間的長さ(周期に対する比率)

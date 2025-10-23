@@ -22,7 +22,9 @@ from osc_sender import (
     filter_vals,
     get_prev_vals,
     set_prev_vals,
+    get_current_speed,
     gh_reset,
+    set_repeat_mode,
 )
 from osc_receiver import (
     start_osc_receiver_thread,
@@ -39,6 +41,7 @@ from osc_listener import (
     start_osc_listener_thread,
     register_message_callback,
 )
+from osc_speaker import osc_speaker
 
 from pythonosc.udp_client import SimpleUDPClient
 
@@ -536,6 +539,14 @@ def listener_message_callback(address, *args):
             return init(enable=False)
         elif candidate == "Halt":
             return halt()
+        elif candidate == "GetAverageSpeed":
+            current_speed = get_current_speed()
+            abs_avg_speed = sum(abs(s) for s in current_speed) / len(current_speed)
+            return osc_speaker.send_message("/AverageSpeed", abs_avg_speed)
+        elif candidate == "GetSpeed":
+            return osc_speaker.send_message("/Speed", get_current_speed())
+        elif candidate == "GetPosition":
+            return osc_speaker.send_message("/Position", get_prev_vals())
         elif candidate == "RaiseError":
             return 1 / 0
         logger.warning(f"not matching no-arg command for candidate '/{candidate}'")
@@ -554,6 +565,8 @@ def listener_message_callback(address, *args):
         for key in ["MODE", "PORT", "NUM_SERVOS", "RATE_fps", "ALPHA"]:
             if candidate == key:
                 val = args[0]
+                if key == "MODE":
+                    set_repeat_mode()
                 try:
                     set_param_full(key, type(params_full[key])(val))
                 except Exception as e:
@@ -572,6 +585,8 @@ def handle_bundle(bundle_contents):
                 value = args[0]
                 try:
                     if key in get_params_full():
+                        if key == "MODE":
+                            set_repeat_mode()
                         set_param_full(key, value)
                     elif key in get_params_mode():
                         set_param_mode(key, value)

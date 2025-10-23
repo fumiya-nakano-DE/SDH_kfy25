@@ -11,6 +11,14 @@ import sys, time, math, random
 from logger_config import logger
 
 prev_vals = None
+current_speed = None
+
+
+def get_current_speed():
+    global current_speed
+    if current_speed is None:
+        return [0] * NUM_SERVOS
+    return current_speed
 
 
 def get_prev_vals():
@@ -93,6 +101,8 @@ def filter_vals(raw_vals, alpha):
     else:
         vals = [int(p + alpha * (c - p)) for p, c in zip(prev, raw_vals)]
 
+    # Apply limits ==============================
+    # === Absolute limit ========================
     limited_absolute = False
     limit_absolute = get_params_full().get("LIMIT_ABSOLUTE")
     for i in range(len(vals)):
@@ -103,6 +113,7 @@ def filter_vals(raw_vals, alpha):
             vals[i] = 0
             limited_absolute = True
 
+    # === Relational limit ======================
     limited_relational = False
     limit_relational = get_params_full().get("LIMIT_RELATIONAL")
     valsLPF = vals.copy()
@@ -117,14 +128,44 @@ def filter_vals(raw_vals, alpha):
             vals[i] = 0.5 * min(b_1 + valsLPF[i], b_2 + valsLPF[i])
             limited_relational = True
 
-    if limited_relational or limited_absolute:
+    # === Speed limit ===========================
+    limited_speed = False
+    limit_speed = get_params_full().get("LIMIT_SPEED") / float(
+        get_params_full().get("RATE_fps", 24)
+    )
+    for i in range(len(vals)):
+        if vals[i] - prev[i] > limit_speed:
+            vals[i] = prev[i] + limit_speed
+            limited_speed = True
+        elif vals[i] - prev[i] < -limit_speed:
+            vals[i] = prev[i] - limit_speed
+            limited_speed = True
+
+    global current_speed
+    current_speed = [vals[i] - prev[i] for i in range(len(vals))]
+
+    if limited_relational or limited_absolute or limited_speed:
         logger.warning(
-            "Output limited: %s%s",
-            "ABS " if limited_absolute else "",
-            "REL" if limited_relational else "",
+            "Output limited: %s%s%s",
+            "[ABS]" if limited_absolute else "",
+            "[REL]" if limited_relational else "",
+            "[SPE]" if limited_speed else "",
         )
 
     return vals
+
+
+__repeat_mode = False
+
+
+def set_repeat_mode(repeat=True):
+    global __repeat_mode
+    __repeat_mode = repeat
+
+
+def get_repeat_mode():
+    global __repeat_mode
+    return __repeat_mode
 
 
 def osc_sender(stop_event):
@@ -147,10 +188,19 @@ def osc_sender(stop_event):
     easing_to = []
 
     starting_motion = True
+    __repeat_mode = False
 
     while not stop_event.is_set():
-        if mode != get_params_full().get("MODE") or starting_motion:
+        if (
+            mode != get_params_full().get("MODE")
+            or starting_motion
+            or get_repeat_mode()
+        ):
+            if get_repeat_mode():
+                print(f"\nRepeat mode set due to MODE change\n")
+                set_repeat_mode(False)
             starting_motion = False
+
             mode = get_params_full().get("MODE")
             print(f"=== MODE: {mode} ===")
             logger.info("Switched to mode %s", mode)
