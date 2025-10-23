@@ -12,21 +12,29 @@ def solid(t, num_servos):
 
 
 def cone(t, num_servos):
+    param_a = float(get_params_mode().get("AMP_PARAM_A", 0.25)) * 2 - 1
     idx = np.arange(num_servos, dtype=float)
-    return (num_servos - idx) / num_servos
+    t_norm = idx / (num_servos - 1)
+    if param_a >= 0:
+        curve = np.power(t_norm, 4 * param_a)
+    else:
+        curve = np.power(1 - t_norm, 4 * abs(-param_a))
+    return curve
 
 
 def amp_sin(t, num_servos):
     freq = get_params_mode().get("AMP_FREQ", 0.2)
+    amp_amplitude = float(get_params_mode().get("AMP_PARAM_A", 0.5))
     phase_shift = (
         (2 * math.pi)
         / num_servos
-        / max(get_params_mode().get("AMP_PARAM_A", 0.2), 1e-6)
+        / max(get_params_mode().get("AMP_PARAM_B", 0.2), 1e-6)
         / 2
     )
     return np.array(
         [
-            0.5 * (1 + math.sin(2 * math.pi * freq * t + i * phase_shift))
+            (1 - amp_amplitude)
+            + math.sin(2 * math.pi * freq * t + i * phase_shift) * amp_amplitude
             for i in range(num_servos)
         ],
         dtype=float,
@@ -40,6 +48,25 @@ def amplitude_modulation(t, num_servos):
     )
 
 
+def amp_gaussian_window(t, num_servos):
+    raw_amp_freq = get_params_mode().get("AMP_FREQ", 0.1)
+    amp_freq = abs(raw_amp_freq) / 5
+
+    cycle = math.floor(t / (1 / max(raw_amp_freq, 1e-6)))
+    t = t - cycle / max(raw_amp_freq, 1e-6)
+
+    amp_param_a = float(get_params_mode().get("AMP_PARAM_A", 0.1))
+
+    duty = duty_from_param_a(1 / amp_freq * amp_param_a)
+
+    center = duty * 0.65
+    sigma = max(duty / 4.0, 1e-6)
+
+    a = math.exp(-((t - center) ** 2) / (2.0 * sigma**2))
+
+    return np.array([a] * num_servos, dtype=float)
+
+
 def amp_emerging(t, num_servos):
     damping = float(get_params_mode().get("AMP_PARAM_A", 0.1))
     rate = max(damping, 1e-6)
@@ -49,6 +76,7 @@ def amp_emerging(t, num_servos):
 
 def amp_locational(t, num_servos):
     amp_param_a = float(get_params_mode().get("AMP_PARAM_A", 0.1))
+    # amp_param_b = float(get_params_mode().get("AMP_PARAM_B", 0.1))
     distances, dot_products = location_distance(0, num_servos)
     # rate = max(distances, [1e-6] * num_servos)
     # exponential decay: close to 1 at distance=0, ->0 as distance grows
@@ -73,7 +101,7 @@ def duty_from_param_a(cycle):
 
 
 def rate_from_param_b(duty):
-    return duty / max(float(get_params_mode().get("PARAM_B", 1e-6)), 1e-6)
+    return duty / 100 / max(float(get_params_mode().get("PARAM_B", 1e-6)), 1e-6)
 
 
 # -------------------------
@@ -92,9 +120,12 @@ def azimuth_phase(i):
     return (i % 3) / 3 * math.pi * 2
 
 
+# -------------------------
+# Location-based effects
+# -------------------------
 def location_distance(i, num_servos):
-    r = float(get_params_mode().get("HELIX_RADIUS", 1.0))
-    p = float(get_params_mode().get("HELIX_PITCH", 1.0))
+    r = 1
+    p = 1
     num_turns = num_servos / 3.0
     coords = []
     for idx in range(num_servos):
@@ -103,9 +134,14 @@ def location_distance(i, num_servos):
         x = r * math.cos(theta)
         y = r * math.sin(theta)
         coords.append([x, y, z])
-    degree = 0
+    degree = get_params_mode().get("LOCATION_DEGREE", 0)
+    height = get_params_mode().get("LOCATION_HEIGHT", 0.7)
     origin = np.array(
-        [math.cos(degree * math.pi / 180), math.sin(degree * math.pi / 180), 7.0]
+        [
+            math.cos(degree * math.pi * 2),
+            math.sin(degree * math.pi * 2),
+            height * 10,
+        ]
     )
     distances = [np.linalg.norm(np.array(coord) - origin) for coord in coords]
     origin_vec = origin / np.linalg.norm(origin)
@@ -118,38 +154,10 @@ def location_distance(i, num_servos):
 # -------------------------
 # Window functions
 # -------------------------
-def window_gaussian(t_rel, duty):
+def window_gaussian(t, duty):
     center = duty / 2.0
     sigma = max(duty / 4.0, 1e-6)
-    return math.exp(-((t_rel - center) ** 2) / (2.0 * sigma**2))
-
-
-def window_rectangular(t_rel, duty):
-    return 1.0 if 0.0 <= t_rel <= duty else 0.0
-
-
-# -------------------------
-# Core wave
-# -------------------------
-def azimuth_core(i, num_servos, t, rate):
-    return math.sin(2 * math.pi * rate * t + azimuth_phase(i) + phase(i, num_servos))
-
-
-def azimuth_base(t, num_servos, window_func=None):
-    cycle = cycle_from_params()
-    t_mod = t % cycle
-    window = 1.0
-    if window_func is not None:
-        duty = duty_from_param_a(cycle)
-        window = window_func(t_mod, duty) if t_mod <= duty else 0.0
-        rate = rate_from_param_b(duty)
-    else:
-        rate = base_freq()
-
-    vals = [
-        azimuth_core(i, num_servos, t_mod, rate) * window for i in range(num_servos)
-    ]
-    return np.array(vals, dtype=float)
+    return math.exp(-((t - center) ** 2) / (2.0 * sigma**2))
 
 
 # -------------------------
@@ -165,15 +173,16 @@ def sin(t, num_servos):
 
 
 def azimuth(t, num_servos):
-    return azimuth_base(t, num_servos, window_func=None)
+    def azimuth_core(i, num_servos, t, rate):
+        return math.sin(
+            2 * math.pi * rate * t + azimuth_phase(i) + phase(i, num_servos)
+        )
 
-
-def azimuth_window_gaussian(t, num_servos):
-    return azimuth_base(t, num_servos, window_gaussian)
-
-
-def azimuth_window_rectangular(t, num_servos):
-    return azimuth_base(t, num_servos, window_rectangular)
+    cycle = cycle_from_params()
+    t_mod = t % cycle
+    rate = base_freq()
+    vals = [azimuth_core(i, num_servos, t_mod, rate) for i in range(num_servos)]
+    return np.array(vals, dtype=float)
 
 
 def soliton(t, num_servos):
@@ -189,52 +198,56 @@ def soliton(t, num_servos):
 
 
 def damped_oscillation(t, num_servos):
-    freq = base_freq()
-    damping = float(get_params_mode().get("PARAM_A", 0.1)) * 10  # 減衰係数
+    amp_freq = get_params_mode().get("AMP_FREQ", 0.1)
+    damping = max(float(get_params_mode().get("AMP_PARAM_A", 0.1)), 1e-6) * 10
     vals = [
-        math.exp(-damping * t) * math.sin(2 * math.pi * freq * t + phase(i, num_servos))
+        math.exp(-damping * t)
+        * math.sin(2 * math.pi * amp_freq * t + phase(i, num_servos))
         for i in range(num_servos)
     ]
     return np.array(vals, dtype=float)
 
 
 def damped_oscillation_locational(t, num_servos):
-    freq = base_freq()
-    damping = float(get_params_mode().get("PARAM_A", 0.1)) * 10
-    convey = float(get_params_mode().get("AMP_PARAM_A", 0.1)) * 10
+    amp_freq = get_params_mode().get("AMP_FREQ", 0.1)
+    damping = max(float(get_params_mode().get("AMP_PARAM_A", 0.1)), 1e-6) * 10
+    convey = float(get_params_mode().get("AMP_PARAM_B", 0.1)) * 10
     vals = [0] * num_servos
     distances, dot_products = location_distance(0, num_servos)
     for i in range(num_servos):
-        t_i = t - distances[i] / (2 * math.pi * freq) * convey
+        t_i = t - distances[i] / (2 * math.pi * amp_freq) * convey
         if t_i < 0:
             vals[i] = 0
             continue
-        vals[i] = math.exp(-damping * t_i) * math.sin(2 * math.pi * freq * t_i)
+        vals[i] = math.exp(-damping * t_i) * math.sin(2 * math.pi * amp_freq * t_i)
     return np.array(vals, dtype=float)
 
 
 def damped_oscillation_displace(t, num_servos):
-    freq = base_freq()
+    amp_freq = get_params_mode().get("AMP_FREQ", 0.1)
     damping = float(get_params_mode().get("PARAM_A", 0.1)) * 10
     convey = float(get_params_mode().get("AMP_PARAM_A", 0.1)) * 10
     vals = [0] * num_servos
     distances, dot_products = location_distance(0, num_servos)
     for i in range(num_servos):
-        t_i = t - distances[i] / (2 * math.pi * freq) * convey
+        t_i = t - distances[i] / (2 * math.pi * amp_freq) * convey
         if t_i < 0:
             vals[i] = 0
             continue
         vals[i] = (
             math.exp(-damping * t_i)
-            * math.sin(2 * math.pi * freq * t_i)
+            * math.sin(2 * math.pi * amp_freq * t_i)
             * dot_products[i]
         )
     return np.array(vals, dtype=float)
 
 
 def random(t, num_servos):
-    np.random.seed(int(t * 1000))  # Seed with time for reproducibility
-    vals = np.random.uniform(-1, 1, num_servos)
+    freq = base_freq()
+    vals = [0] * num_servos
+    for i in range(num_servos):
+        np.random.seed(int(t * freq) + i)  # Seed with time for reproducibility
+        vals[i] = np.random.uniform(-1, 1)
     return vals
 
 

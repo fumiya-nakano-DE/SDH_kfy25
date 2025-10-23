@@ -2,9 +2,10 @@ import json
 from logger_config import logger
 
 ### Default parameters hard-coded in this file are used  ###
-### ONLY WHEN params.json IS NOT EXISTENT or INCOMPLETE. ###
+### ONLY WHEN params.yaml IS NOT EXISTENT or INCOMPLETE. ###
 
-LOCKED_KEYS = ["STROKE_OFFSET", "STROKE_LENGTH"]
+# LOCKED_KEYS = ["STROKE_OFFSET", "STROKE_LENGTH"]
+LOCKED_KEYS = []
 
 PARAMS_FILE = "params.json"
 
@@ -15,7 +16,6 @@ VALS_PER_HOST = 8
 NUM_SERVOS = 32
 # MOTOR_POSITION_MAPPING = [i for i in range(NUM_SERVOS - 1, -1, -1)]
 MOTOR_POSITION_MAPPING = [i for i in range(NUM_SERVOS)]
-
 
 DEFAULT_MODES = {}
 

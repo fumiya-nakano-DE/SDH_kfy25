@@ -40,6 +40,27 @@ http://localhost:5000/
 
 Notes: the main server entry is `osc_webUI/ritsudo_server.py` (replaces older `send_osc_webUI.py`). By default the app is configured to avoid running duplicate OSC receiver threads from the Flask reloader; use the file above to start the server directly.
 
+## Global Params
+
+| Parameter        | Description                                                                 |
+| ---------------- | --------------------------------------------------------------------------- |
+| `MODE`           | Current mode ID. Determines the active behavior of the system.              |
+| `HOST`           | IP address of the host machine.                                             |
+| `PORT`           | Port number for OSC communication.                                          |
+| `HOSTS`          | List of client IP addresses for OSC communication.                          |
+| `OSC_RECV_PORTS` | List of ports for receiving OSC messages.                                   |
+| `NUM_SERVOS`     | Number of servo motors in the system.                                       |
+| `RATE_fps`       | Frame rate for the system's operation.                                      |
+| `ALPHA`          | Smoothing factor for certain calculations.                                  |
+| `Kp`, `Ki`, `Kd` | PID controller parameters for proportional, integral, and derivative gains. |
+| `STROKE_OFFSET`  | Offset value for the stroke position. 動作の中立点を決める。                |
+| `SEND_CLIENTS`   | Boolean flag to enable or disable sending data to STEP800.                  |
+| `SEND_CLIENT_GH` | Boolean flag to enable or disable sending data to Grasshopper.              |
+
+---
+
+## [モードのリスト](modes.md)
+
 ## 実装メモ
 
 ### モーターのマッピング(2025.10.21)
