@@ -233,7 +233,7 @@ def homing(motor_id):
     client.send_message("/homing", [local_id])
 
     status = wait_for_homing_complete(
-        motor_id, timeout=float(params_full.get("HOMING_TIMEOUT", 12.0))
+        motor_id, timeout=float(params_full.get("HOMING_TIMEOUT", 21.0))
     )
     enable_servo(client, enable=True, broadcast=True)
 
@@ -288,17 +288,66 @@ def homing_endpoint():
 
 
 def home_all():
-    params_full = get_params_full()
 
     setNeutral()
-    for i in range(params_full["NUM_SERVOS"]):
-        motorID = MOTOR_POSITION_MAPPING[i] + 1
-        status = homing(motorID)
-        if status is None or int(status) != 3:
-            disable_motor(motorID)
+
+    n = len(MOTOR_POSITION_MAPPING)
+    half = n // 2
+    boolSuccess = False
+
+    for i in range(half):
+        motorID_1 = MOTOR_POSITION_MAPPING[i] + 1
+        motorID_2 = MOTOR_POSITION_MAPPING[n - 1 - i] + 1
+
+        if n % 2 == 0 and i == half - 1:
+            status_1 = homing(motorID_1)
+            if status_1 is None or int(status_1) != 3:
+                disable_motor(motorID_1)
+            else:
+                boolSuccess = True
+            setNeutral()
+
+            status_2 = homing(motorID_2)
+            if status_2 is None or int(status_2) != 3:
+                disable_motor(motorID_2)
+            else:
+                boolSuccess = True
+        else:
+            t1 = Thread(target=homing, args=(motorID_1,))
+            t2 = Thread(target=homing, args=(motorID_2,))
+            t1.start()
+            t2.start()
+            t1.join()
+            t2.join()
+
+            status_1 = get_latest_homing_status(motorID_1)
+            status_2 = get_latest_homing_status(motorID_2)
+            if status_1 is None or int(status_1) != 3:
+                disable_motor(motorID_1)
+            else:
+                boolSuccess = True
+            if status_2 is None or int(status_2) != 3:
+                disable_motor(motorID_2)
+            else:
+                boolSuccess = True
+
         setNeutral()
 
+    if n % 2 == 1:
+        status = homing(MOTOR_POSITION_MAPPING[half] + 1)
+        if status is None or int(status) != 3:
+            disable_motor(MOTOR_POSITION_MAPPING[half] + 1)
+        else:
+            boolSuccess = True
+        setNeutral()
+
+    if not boolSuccess:
+        logger.error("homing-all failed for all motors.")
+        osc_speaker.send_message("/Homed", -1)
+        return {"result": "NG", "error": "Homing failed for all motors"}
+
     logger.info("homing-all finished.")
+    osc_speaker.send_message("/Homed", 1)
     return {"result": "OK"}
 
 
@@ -389,9 +438,9 @@ def init(enable=True):
                 # [255, 25, 75, 75, 75],  # SS2421 12V
                 [255, 10, 25, 25, 25],  # SS2421 24V-Low
             )  # (int)motorID (int)holdKVAL (int)runKVAL (int)accKVAL (int)setDecKVAL
-            # client.send_message("/setGoUntilTimeout", [255, 10000])
+            client.send_message("/setGoUntilTimeout", [255, 20000])
             # client.send_message("/setHomingDirection", [255, 0])
-            # client.send_message("/setHomingSpeed", [255, 100])
+            client.send_message("/setHomingSpeed", [255, 200])
             client.send_message(
                 "/setPosition", [255, int(params_full.get("STROKE_OFFSET", 50000))]
             )
