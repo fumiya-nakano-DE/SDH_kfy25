@@ -6,6 +6,19 @@ This document provides a detailed representation of the modes defined in `params
 
 ---
 
+## Limitation Global Params
+
+主に`osc_webUI/osc_sender.py`の`filter_vals`関数内で適用されます。
+
+| パラメータ | 説明 | 適用方法 / 備考 |
+|---|---|---|
+| `LIMIT_ABSOLUTE` | 各軸に対する絶対位置の上限値。最大の伸び量を規定します。出力がこの値を超えると切り詰められます（また負値は 0 にクリップされます）。 | `vals[i] > LIMIT_ABSOLUTE` の場合 `vals[i] = LIMIT_ABSOLUTE`。テンプレートのスライダ範囲は通常`0~200000`。デフォルト`120000`。`STROKE_OFFSET` より大きく設定する必要があります。|
+| `LIMIT_RELATIONAL` | 隣接軸との相対的な伸び制限を規定するパラメータ。隣接する軸と合わせたときに許容される振幅の上限を数学的に制御します。 | 実装では近傍の値を元に `solve_relational_limit` を計算し、中心軸がその解を超えないように調整します（`osc_sender.py`）。テンプレートのスライダ範囲は`0~200000`。デフォルト`173200`。`STROKE_OFFSET` より大きく設定する必要があります。|
+| `LIMIT_SPEED` | 出力値の最大変化量（速度）を表すパラメータ。単位はSTEP/秒相当（サーバはフレームレート`RATE_fps`で割ってフレーム毎の最大変位に変換します）。 | 実際のフレーム毎の上限は `LIMIT_SPEED / RATE_fps`。したがって`RATE_fps`を上げるとフレームあたりの変化量は小さくなります。テンプレートのスライダ範囲は`0~100000`。デフォルト`80000`。|
+| `STROKE_OFFSET` | 中立点（中立位置）のオフセット値。全軸の基準（中心）位置として使われます。 | 多くの出力初期値やリセットでこの値が用いられます。テンプレートのスライダ範囲は`0~100000`。デフォルト`50000`。|
+
+- 出力がいずれかのリミットによって切り詰められると、ログに `[ABS]`（絶対制限） `[REL]`（相対制限） `[SPE]`（速度制限）のいずれかが表示されます（`osc_sender.py` の警告メッセージ）。
+
 ## Motion related Global Params
 
 | Command           | Description                                                                                                                                                                                                                |
@@ -16,7 +29,6 @@ This document provides a detailed representation of the modes defined in `params
 | `U_WIDTH`         | 実時刻 `t` に対する可変時刻 `u` の進みの速さの倍率のランダム幅 (全幅 * 1/2) を指定します。`0` にすると `U_AVERAGE` での設定で固定されます。ランダムは `U_AVERAGE - U_WIDTH ~ U_AVERAGE + U_WIDTH` の間で単純に分布します。 |
 | `U_FREQUENTNESS`  | `u` (正確には `dudt`) をランダム変更する時間間隔を Hz で指定します。`0` にすると `U_AVERAGE` での設定で固定されます。変更タイミングにはランダムを入れていません(例: `0.1` に設定したら 10 秒間隔で `dudt` が変わる)。      |
 | `DIRECTION`       | 位相の進む方向を逆にできます。                                                                                                                                                                                             |
-
 
 ## Mode Specific Params
 
@@ -172,7 +184,7 @@ Sinのamplitudeをかけた`102`
 
 #### `40x` 全体が単純に減衰振動 ★☆☆
 #### `42x` "場所"に感度のある減衰振動 ★★★
-#### `43x` "場所"と"向き"に感度のある減衰振動 ☆☆☆
+#### `43x` "場所"と"向き"に感度のある減衰振動 ★☆☆
 
 ### `501` [DEPLICATED] emerging sin
 
@@ -241,117 +253,193 @@ Sinのamplitudeをかけた`102`
 
 ```mermaid
 graph LR
-    subgraph Modes
-        mode101["101 Simple sin"]
-        mode102["102 Azimuth slide"]
-        mode111["111 Coned Sin"]
-        mode112["112 Coned Azimuth Slide"]
-        mode121["121 Sined Sin"]
-        mode122["122 Sined Azimuth Slide"]
-        mode151["151 Gauss Windowed Sin"]
-        mode152["152 Gauss Windowed Azimuth Slide"]
-        mode301["301 Soliton wave"]
-        mode305["305 Damped oscillation"]
-        mode401["401 Damped oscillation locational"]
-        mode402["402 Damped oscillation displace"]
-        mode501["501 Emerging sin"]
-        mode502["502 Emerging Azimuth Slide"]
-        mode601["601 Locational sin"]
-        mode602["602 Locational Azimuth Slide"]
-        mode701["701 Random"]
-        mode702["702 Random sin"]
-        mode703["703 Random sin freq"]
-    end
+  %% Modes (from params.json)
+  subgraph Modes
+    mode101["101 Simple sin"]
+    mode102["102 Azimuth slide"]
+    mode111["111 Coned Sin"]
+    mode112["112 Coned Azimuth Slide"]
+    mode121["121 Sined Sin"]
+    mode122["122 Sined Azimuth Slide"]
+    mode151["151 Gauss Windowed Sin"]
+    mode152["152 Gauss Windowed Azimuth Slide"]
+    mode301["301 Soliton wave"]
+    mode401["401 Damped oscillation (amp mode) "]
+    mode402["402 Damped oscillation (amp mode) AZ"]
+    mode421["421 Damped locational inflate"]
+    mode422["422 Damped locational azimuth"]
+    mode431["431 Damped displace inflate"]
+    mode432["432 Damped displace azimuth"]
+    mode601["601 Locational sin"]
+    mode602["602 Locational azimuth"]
+    mode700["700 Random (deprecated)"]
+    mode701["701 Random sin"]
+    mode702["702 Random sin freq"]
+  end
 
-    subgraph Functions
-        sin["sin"]
-        azimuth["azimuth"]
-        cone["cone"]
-        amp_sin["amp_sin"]
-        amp_gaussian_window["amp_gaussian_window"]
-        soliton["soliton"]
-        damped_oscillation["damped_oscillation"]
-        damped_oscillation_locational["damped_oscillation_locational"]
-        damped_oscillation_displace["damped_oscillation_displace"]
-        random["random"]
-        random_sin["random_sin"]
-        random_sin_freq["random_sin_freq"]
-        amp_locational
-        amp_emerging
-    end
+  %% Public mode & amp functions
+  subgraph Functions
+    sin["sin"]
+    azimuth["azimuth"]
+    soliton["soliton"]
+    damped_oscillation["damped_oscillation"]
+    damped_oscillation_locational["damped_oscillation_locational"]
+    damped_oscillation_displace["damped_oscillation_displace"]
+    random["random"]
+    random_sin["random_sin"]
+    random_sin_freq["random_sin_freq"]
 
-    subgraph Parameters
-        stroke_length_param["STROKE_LENGTH"]
-        base_freq_param["BASE_FREQ"]
-        phase_rate_param["PHASE_RATE"]
-        param_a["PARAM_A"]
-        param_b["PARAM_B"]
-        amp_freq_param["AMP_FREQ"]
-        amp_param_a["AMP_PARAM_A"]
-        amp_param_b["AMP_PARAM_B"]
-        location_degree_param["LOCATION_DEGREE"]
-        location_height_param["LOCATION_HEIGHT"]
-    end
+    %% amplitude helpers
+    amplitude_modulation["amplitude_modulation"]
+    solid["solid"]
+    cone["cone"]
+    amp_sin["amp_sin"]
+    amp_gaussian_window["amp_gaussian_window"]
+    amp_emerging["amp_emerging"]
+    amp_locational["amp_locational"]
 
-    %% Mode to Function Relationships
-    mode101 --> sin
-    mode102 --> azimuth
-    mode111 --> sin
-    mode111 -.-> cone
-    mode112 --> azimuth
-    mode112 -.-> cone
-    mode121 --> sin
-    mode121 -.-> amp_sin
-    mode122 --> azimuth
-    mode122 -.-> amp_sin
-    mode151 --> sin
-    mode151 -.-> amp_gaussian_window
-    mode152 --> azimuth
-    mode152 -.-> amp_gaussian_window
-    mode301 --> soliton
-    mode305 --> damped_oscillation
-    mode401 --> damped_oscillation_locational
-    mode402 --> damped_oscillation_displace
-    mode501 --> sin
-    mode501 -.-> amp_emerging
-    mode502 --> azimuth
-    mode502 -.-> amp_emerging
-    mode601 --> sin
-    mode601 -.-> amp_locational
-    mode602 --> azimuth
-    mode602 -.-> amp_locational
-    mode701 --> random
-    mode702 --> random_sin
-    mode703 --> random_sin_freq
+    %% utility helpers
+    make_frame["make_frame"]
+    base_freq["base_freq"]
+    cycle_from_params["cycle_from_params"]
+    duty_from_param_a["duty_from_param_a"]
+    rate_from_param_b["rate_from_param_b"]
+    phase_fn["phase"]
+    azimuth_phase["azimuth_phase"]
+    location_distance["location_distance"]
+    window_gaussian["window_gaussian"]
+  end
 
-    %% Function to Parameter Relationships
-    sin --> base_freq_param
-    sin --> phase_rate_param
-    azimuth --> base_freq_param
-    azimuth --> phase_rate_param
-    cone --> amp_param_a
-    amp_sin --> amp_freq_param
-    amp_sin --> amp_param_a
-    amp_sin --> amp_param_b
-    amp_gaussian_window --> amp_freq_param
-    amp_gaussian_window --> amp_param_a
-    soliton --> param_a
-    soliton --> param_b
-    damped_oscillation --> amp_freq_param
-    damped_oscillation --> param_a
-    damped_oscillation_locational --> amp_freq_param
-    damped_oscillation_locational --> amp_param_a
-    damped_oscillation_locational --> location_degree_param
-    damped_oscillation_locational --> location_height_param
-    damped_oscillation_displace --> amp_freq_param
-    damped_oscillation_displace --> param_a
-    damped_oscillation_displace --> amp_param_a
-    damped_oscillation_displace --> location_degree_param
-    damped_oscillation_displace --> location_height_param
-    random --> base_freq_param
-    random_sin --> base_freq_param
-    random_sin_freq --> base_freq_param
-    random_sin_freq --> amp_freq_param
-    amp_locational --> location_degree_param
-    amp_locational --> location_height_param
+  %% Parameters (used by functions)
+  subgraph Parameters
+    STROKE_LENGTH["STROKE_LENGTH"]
+    STROKE_LENGTH_LIMIT["STROKE_LENGTH_LIMIT / SPECIFIC"]
+    BASE_FREQ["BASE_FREQ"]
+    PHASE_RATE["PHASE_RATE"]
+    PARAM_A["PARAM_A"]
+    PARAM_B["PARAM_B"]
+    AMP_FREQ["AMP_FREQ"]
+    AMP_PARAM_A["AMP_PARAM_A"]
+    AMP_PARAM_B["AMP_PARAM_B"]
+    LOCATION_DEGREE["LOCATION_DEGREE"]
+    LOCATION_HEIGHT["LOCATION_HEIGHT"]
+    DIRECTION["DIRECTION"]
+    STROKE_OFFSET["STROKE_OFFSET"]
+  end
+
+  %% Mode -> main function (FUNC)
+  mode101 --> sin
+  mode102 --> azimuth
+  mode111 --> sin
+  mode112 --> azimuth
+  mode121 --> sin
+  mode122 --> azimuth
+  mode151 --> sin
+  mode152 --> azimuth
+  mode301 --> soliton
+  mode401 --> sin
+  mode402 --> azimuth
+  mode421 --> azimuth
+  mode422 --> azimuth
+  mode431 --> sin
+  mode432 --> azimuth
+  mode601 --> sin
+  mode602 --> azimuth
+  mode700 --> random
+  mode701 --> random_sin
+  mode702 --> random_sin_freq
+
+  %% Modes that use amplitude_modulation via AMP_MODE (dashed)
+  mode111 -.-> cone
+  mode121 -.-> amp_sin
+  mode122 -.-> amp_sin
+  mode151 -.-> amp_gaussian_window
+  mode152 -.-> amp_gaussian_window
+  mode401 -.-> damped_oscillation
+  mode402 -.-> damped_oscillation
+  mode421 -.-> damped_oscillation_locational
+  mode422 -.-> damped_oscillation_locational
+  mode431 -.-> damped_oscillation_displace
+  mode432 -.-> damped_oscillation_displace
+  mode601 -.-> amp_locational
+  mode602 -.-> amp_locational
+
+  %% amplitude_modulation composition
+  amplitude_modulation --> STROKE_LENGTH
+  amplitude_modulation --> STROKE_LENGTH_LIMIT
+  amplitude_modulation -.-> solid
+  amplitude_modulation -.-> cone
+  amplitude_modulation -.-> amp_sin
+  amplitude_modulation -.-> amp_gaussian_window
+  amplitude_modulation -.-> amp_emerging
+  amplitude_modulation -.-> amp_locational
+
+  %% make_frame composes raw func * amplitude + offset
+  make_frame --> sin
+  make_frame --> azimuth
+  make_frame --> soliton
+  make_frame --> amplitude_modulation
+  make_frame --> DIRECTION
+  make_frame --> STROKE_OFFSET
+
+  %% Function -> parameter dependencies
+  sin --> BASE_FREQ
+  sin --> PHASE_RATE
+
+  azimuth --> BASE_FREQ
+  azimuth --> PHASE_RATE
+  azimuth --> cycle_from_params
+  cycle_from_params --> base_freq
+
+  soliton --> cycle_from_params
+  soliton --> PARAM_A
+  soliton --> PARAM_B
+  soliton --> window_gaussian
+
+  damped_oscillation --> AMP_FREQ
+  damped_oscillation --> AMP_PARAM_A
+
+  damped_oscillation_locational --> AMP_FREQ
+  damped_oscillation_locational --> AMP_PARAM_A
+  damped_oscillation_locational --> AMP_PARAM_B
+  damped_oscillation_locational --> location_distance
+  damped_oscillation_displace --> AMP_FREQ
+  damped_oscillation_displace --> PARAM_A
+  damped_oscillation_displace --> AMP_PARAM_A
+  damped_oscillation_displace --> location_distance
+
+  amp_sin --> AMP_FREQ
+  amp_sin --> AMP_PARAM_A
+  amp_sin --> AMP_PARAM_B
+
+  amp_gaussian_window --> AMP_FREQ
+  amp_gaussian_window --> AMP_PARAM_A
+  amp_gaussian_window --> duty_from_param_a
+  duty_from_param_a --> PARAM_A
+  rate_from_param_b --> PARAM_B
+
+  amp_locational --> AMP_PARAM_A
+  amp_locational --> location_distance
+
+  cone --> AMP_PARAM_A
+
+  location_distance --> LOCATION_DEGREE
+  location_distance --> LOCATION_HEIGHT
+
+  window_gaussian --> PARAM_A
+
+  random --> base_freq
+  random_sin --> base_freq
+  random_sin_freq --> base_freq
+  random_sin_freq --> AMP_FREQ
+
+  phase_fn --> PHASE_RATE
+  azimuth_phase --> BASE_FREQ
+
+  %% helper chain
+  base_freq --> BASE_FREQ
+
+  %% visual hint: make_frame is the frame builder used by sender
+  make_frame -.-> usage_note["used by osc_sender.make_frame() / osc_sender"]
+
 ```

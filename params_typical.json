@@ -1,5 +1,5 @@
 {
-  "MODE": "432",
+  "MODE": "431",
   "MODES": {
     "101": {
       "NAME": "Simple sin",
@@ -39,7 +39,7 @@
       "STROKE_LENGTH": 20000,
       "FUNC": "sin",
       "AMP_MODE": "cone",
-      "AMP_PARAM_A": 0.0
+      "AMP_PARAM_A": 0.25
     },
     "112": {
       "NAME": "Coned Azimuth slide",
@@ -53,7 +53,7 @@
       "STROKE_LENGTH": 20000,
       "FUNC": "azimuth",
       "AMP_MODE": "cone",
-      "AMP_PARAM_A": 0.0
+      "AMP_PARAM_A": 0.25
     },
     "121": {
       "NAME": "Sined Sin",
@@ -67,9 +67,9 @@
       "STROKE_LENGTH": 20000,
       "FUNC": "sin",
       "AMP_MODE": "amp_sin",
-      "AMP_FREQ": 0.46,
-      "AMP_PARAM_A": 0.5,
-      "AMP_PARAM_B": 0.5
+      "AMP_FREQ": 0.2,
+      "AMP_PARAM_A": 0.8,
+      "AMP_PARAM_B": 0.05
     },
     "122": {
       "NAME": "Sined Azimuth slide",
@@ -83,9 +83,9 @@
       "STROKE_LENGTH": 20000,
       "FUNC": "azimuth",
       "AMP_MODE": "amp_sin",
-      "AMP_FREQ": 0.68,
-      "AMP_PARAM_A": 0.69,
-      "AMP_PARAM_B": 0.31
+      "AMP_FREQ": 0.3,
+      "AMP_PARAM_A": 0.5,
+      "AMP_PARAM_B": 0.25
     },
     "151": {
       "NAME": "Gauss Windowed Sin",
@@ -126,8 +126,8 @@
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
       "PARAM_A": 0.1,
-      "PARAM_B": 0.08,
-      "STROKE_LENGTH": 10000,
+      "PARAM_B": 0.5,
+      "STROKE_LENGTH": 20000,
       "FUNC": "soliton"
     },
     "401": {
@@ -138,7 +138,7 @@
       "U_WIDTH": 0,
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
-      "PARAM_A": 0.31,
+      "PARAM_A": 0.3,
       "STROKE_LENGTH": 30000,
       "FUNC": "sin",
       "AMP_MODE": "damped_oscillation",
@@ -153,7 +153,7 @@
       "U_WIDTH": 0,
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
-      "PARAM_A": 0.31,
+      "PARAM_A": 0.3,
       "STROKE_LENGTH": 30000,
       "FUNC": "azimuth",
       "AMP_MODE": "damped_oscillation",
@@ -169,13 +169,13 @@
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
       "PARAM_A": 1.0,
-      "STROKE_LENGTH": 40000,
+      "STROKE_LENGTH": 50000,
       "FUNC": "azimuth",
       "AMP_MODE": "damped_oscillation_locational",
-      "AMP_FREQ": 0.3,
+      "AMP_FREQ": 0.5,
       "AMP_PARAM_A": 0.07,
-      "AMP_PARAM_B": 0.03,
-      "LOCATION_DEGREE": 0.3,
+      "AMP_PARAM_B": 0.05,
+      "LOCATION_DEGREE": 0.0,
       "LOCATION_HEIGHT": 0.7
     },
     "422": {
@@ -187,7 +187,7 @@
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
       "PARAM_A": 1.0,
-      "STROKE_LENGTH": 40000,
+      "STROKE_LENGTH": 50000,
       "FUNC": "azimuth",
       "AMP_MODE": "damped_oscillation_locational",
       "AMP_FREQ": 0.3,
@@ -199,41 +199,43 @@
     "431": {
       "NAME": "damped oscillation displace inflate(sin)",
       "EASING_DURATION": 1.0,
-      "BASE_FREQ": 0.3,
+      "BASE_FREQ": 1.0,
       "U_AVERAGE": 1.0,
       "U_WIDTH": 0,
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
+      "PHASE_RATE": 0.0,
       "PARAM_A": 0.15,
-      "STROKE_LENGTH": 40000,
+      "STROKE_LENGTH": 50000,
       "FUNC": "sin",
       "AMP_MODE": "damped_oscillation_displace",
-      "AMP_PARAM_A": 0.07,
-      "AMP_PARAM_B": 0.07,
+      "AMP_FREQ": 1.0,
+      "AMP_PARAM_A": 0.05,
       "LOCATION_DEGREE": 0.0,
       "LOCATION_HEIGHT": 0.7
     },
     "432": {
       "NAME": "damped oscillation displace Azimuth Slide",
       "EASING_DURATION": 1.0,
-      "BASE_FREQ": 0.58,
+      "BASE_FREQ": 1.0,
       "U_AVERAGE": 1.0,
       "U_WIDTH": 0,
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
+      "PHASE_RATE": 0.0,
       "PARAM_A": 0.15,
-      "STROKE_LENGTH": 40000,
+      "STROKE_LENGTH": 50000,
       "FUNC": "azimuth",
       "AMP_MODE": "damped_oscillation_displace",
-      "AMP_PARAM_A": 0.07,
-      "AMP_PARAM_B": 0.07,
+      "AMP_FREQ": 1.0,
+      "AMP_PARAM_A": 0.05,
       "LOCATION_DEGREE": 0.0,
       "LOCATION_HEIGHT": 0.7
     },
     "501": {
       "NAME": "[depricated] emerging sin",
       "EASING_DURATION": 1.0,
-      "BASE_FREQ": 0.47,
+      "BASE_FREQ": 0.5,
       "U_AVERAGE": 1.0,
       "U_WIDTH": 0,
       "U_FREQUENTNESS": 0.0,
@@ -247,7 +249,7 @@
     "502": {
       "NAME": "[depricated] emerging azimuth",
       "EASING_DURATION": 1.0,
-      "BASE_FREQ": 0.58,
+      "BASE_FREQ": 0.5,
       "U_AVERAGE": 1.0,
       "U_WIDTH": 0,
       "U_FREQUENTNESS": 0.0,
@@ -261,7 +263,7 @@
     "601": {
       "NAME": "locational amped sin",
       "EASING_DURATION": 1.0,
-      "BASE_FREQ": 0.47,
+      "BASE_FREQ": 0.5,
       "U_AVERAGE": 1.0,
       "U_WIDTH": 0,
       "U_FREQUENTNESS": 0.0,
@@ -278,7 +280,7 @@
     "602": {
       "NAME": "locational amped Azimuth Slide",
       "EASING_DURATION": 1.0,
-      "BASE_FREQ": 0.47,
+      "BASE_FREQ": 0.5,
       "U_AVERAGE": 1.0,
       "U_WIDTH": 0,
       "U_FREQUENTNESS": 0.0,
@@ -329,13 +331,13 @@
     50103
   ],
   "NUM_SERVOS": 32,
-  "RATE_fps": 24,
+  "RATE_fps": 60,
   "ALPHA": 0.3,
   "Kp": 0.06,
   "Ki": 0.0,
   "Kd": 0.0,
   "STROKE_OFFSET": 50000,
-  "SEND_CLIENTS": false,
+  "SEND_CLIENTS": true,
   "SEND_CLIENT_GH": true,
   "LIMIT_ABSOLUTE": 120000,
   "LIMIT_RELATIONAL": 173200,
