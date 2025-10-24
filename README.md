@@ -96,7 +96,7 @@ POST`/home_all:5000`もしくはOSC`/Home[]:10000`で呼び出される全軸ホ
 
 ### 振幅設定値上限(2025.10.23)
 
-`STROKE_OFFSET`の最大値`50000`がハードコードされました
+`STROKE_LENGTH`の最大値`50000`がハードコードされました
 
 - 上限を超えた値をOSCやwebUIから設定すること自体は可能で、動作計算時に上限値に丸められます
   - `params.json`を手で編集した時に誤記する可能性があるため、終段で制限しています
@@ -110,6 +110,17 @@ OSCで`"MODE"`パラメータを含むメッセージを送信した際は、以
 ### OSC_Speaker(2025.10.23)
 
 ローカルホスト`10000`への`/GetAverageSpeed[]` `/GetSpeed[]` `/GetPosition[]`に対して、ローカルホスト`10001`に`/AverageSpeed[(int)speed]` `/Speed[(int)Speed[NUM_SERVOS]]` `/Position[(int)Position[NUM_SERVOS]]`が返るようになりました
+
+### `params_typical.json`、LIMIT値更新(2025.10.24)
+
+- 各典型値を更新しました
+- 実機で調整した`LIMIT_ABSOLUTE` `LIMIT_RELATIONAL`に更新しました
+
+### 全軸ホーミングのアルゴリズムを変更しました(2025.10.24)
+
+- `motor_id = 1`(一番下)と`31`(一番上)が同時にホーミングを開始し、以後2本ずつセットでホーミングされます
+- 全軸ホーミングの所要時間は標準で`8.0 * 16 ≈ 130`秒程度、最悪時間は`16.0 * 16 ≈ 260`秒程度、タイムアウトは`21.0 * 16 = 340`秒程度です
+- 終了時に`localhost:10001`に対して`/Homed[1]`(success)もしくは`/Homed[-1]`(completely failed)が送信されます
 
 ## トラブルシューティング
 
