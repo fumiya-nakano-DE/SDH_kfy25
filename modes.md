@@ -210,7 +210,7 @@ Sinのamplitudeをかけた`102`
 - `AMP_PARAM_A`
   - solitonの時間的長さ(周期に対する比率)
 
-### `601` locational amped sin
+### `601` locational amped sin ★★☆
 
 ある"地点"から遠いほど振幅が小さくなる`101`です
 ![601_thumbnail](readme/601.png)
@@ -222,7 +222,7 @@ Sinのamplitudeをかけた`102`
 - `LOCATION_DEGREE`
   - "地点"の位置の極座標z
 
-### `602`locational amped Azimuth Slide
+### `602`locational amped Azimuth Slide ★★☆
 
 ある"地点"から遠いほど振幅が小さくなる`102`です
 [602_thumbnail](readme/602.png)
@@ -443,3 +443,4 @@ graph LR
   make_frame -.-> usage_note["used by osc_sender.make_frame() / osc_sender"]
 
 ```
+
