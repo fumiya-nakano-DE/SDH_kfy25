@@ -261,26 +261,34 @@
         </button>
         {% if running %}
         <i class="fas fa-spinner fa-spin"></i>sending OSC...
-        {% else %}
+        {% endif %}
+        <span id="form-loading" style="display:none; color:#2a7;">
+            <i class="fa-solid fa-spinner fa-spin"></i> configuring...
+        </span>
         <hr style="border-top: 3px double">
-        <button type="button" onclick="sendSetNeutral()">
+        <button type="button" onclick="sendSetNeutral()" {% if running %}disabled{% endif %}>
             <i class="fas fa-undo"></i> Neutral
         </button>
-        <button type="button" onclick="sendHomeAll()">
+        <button type="button" onclick="sendHomeAll()" {% if running %}disabled{% endif %}>
             <i class="fas fa-home"></i> Home All
         </button>
-        <button type="button" id="init-button" onclick="sendInit()">
+        <button type="button" id="init-button" onclick="sendInit()" {% if running %}disabled{% endif %}>
             <i class="fas fa-power-off"></i> Init
         </button>
         <button type="button" onclick="sendRelease()" {% if running %}disabled{% endif %}>
             <i class="fas fa-unlock"></i> Release
         </button>
 
-        {% endif %}
-        <span id="form-loading" style="display:none; color:#2a7;">
-            <i class="fa-solid fa-spinner fa-spin"></i> configuring...
-        </span>
     </form>
+    <br>
+    <!-- Servo Position Visualization -->
+    <div id="servo-visualizer">
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <span id="servo-first-label" style="font-size: 0.8em; color: #666; min-width: 20px; text-align: right;">#1</span>
+            <div id="servo-bars-container" style="flex: 1;"></div>
+            <span id="servo-last-label" style="font-size: 0.8em; color: #666; min-width: 30px; text-align: left;">#31</span>
+        </div>
+    </div>
     <br>
     <form id="independentControllerForm" class="advanced-only">
         <div style="margin-bottom:1em;">

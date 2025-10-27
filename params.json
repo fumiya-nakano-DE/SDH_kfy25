@@ -307,7 +307,7 @@
     50103
   ],
   "NUM_SERVOS": 31,
-  "RATE_fps": 60,
+  "RATE_fps": 100,
   "ALPHA": 0.3,
   "Kp": 0.06,
   "Ki": 0.0,

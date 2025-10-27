@@ -50,6 +50,8 @@ socketio = SocketIO(app)
 
 osc_thread = None
 stop_event = Event()
+position_broadcast_thread = None
+position_broadcast_stop = Event()
 
 
 # --- Helpers ---
@@ -129,6 +131,51 @@ def wait_for_booted(booted_ports, expected_ports, wait_time=10.0, steps=50):
     return False
 
 
+# --- Position Broadcasting ---
+def position_broadcast_worker(stop_event):
+    """Broadcast current servo positions via WebSocket"""
+    while not stop_event.is_set():
+        try:
+            positions = get_prev_vals()
+            if positions is not None:
+                params_full = get_params_full()
+                stroke_offset = params_full.get("STROKE_OFFSET", 50000)
+                # Calculate relative positions from offset
+                relative_positions = [int(pos - stroke_offset) for pos in positions]
+                
+                socketio.emit('servo_positions', {
+                    'positions': relative_positions,
+                    'offset': stroke_offset
+                })
+            
+            time.sleep(0.1)  # 10Hz update rate
+        except Exception as e:
+            logger.error(f"Position broadcast error: {e}")
+            time.sleep(0.5)
+
+
+def start_position_broadcast():
+    global position_broadcast_thread, position_broadcast_stop
+    if position_broadcast_thread is None or not position_broadcast_thread.is_alive():
+        position_broadcast_stop.clear()
+        position_broadcast_thread = Thread(
+            target=position_broadcast_worker,
+            args=(position_broadcast_stop,),
+            daemon=True
+        )
+        position_broadcast_thread.start()
+        logger.info("Position broadcast thread started.")
+
+
+def stop_position_broadcast():
+    global position_broadcast_stop, position_broadcast_thread
+    position_broadcast_stop.set()
+    if position_broadcast_thread is not None:
+        position_broadcast_thread.join(timeout=1)
+        position_broadcast_thread = None
+    logger.info("Position broadcast thread stopped.")
+
+
 # --- HTML Endpoints ---
 def start():
     global osc_thread, stop_event
@@ -137,6 +184,7 @@ def start():
         osc_thread = Thread(target=osc_sender, args=(stop_event,), daemon=True)
         osc_thread.start()
         logger.info("OSC Sender thread started.")
+        start_position_broadcast()
         return True
     return False
 
@@ -148,6 +196,7 @@ def stop():
         osc_thread.join(timeout=2)
         osc_thread = None
     logger.info("OSC Sender thread stopped.")
+    stop_position_broadcast()
 
 
 @app.route("/", methods=["GET", "POST"])

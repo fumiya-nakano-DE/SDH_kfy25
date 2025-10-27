@@ -1,7 +1,6 @@
 from pythonosc.udp_client import SimpleUDPClient
 from osc_params import (
     VALS_PER_HOST,
-    NUM_SERVOS,
     MOTOR_POSITION_MAPPING,
     get_params_full,
     get_params_mode,
@@ -17,14 +16,14 @@ current_speed = None
 def get_current_speed():
     global current_speed
     if current_speed is None:
-        return [0] * NUM_SERVOS
+        return [0] * get_params_full().get("NUM_SERVOS", 31)    
     return current_speed
 
 
 def get_prev_vals():
     global prev_vals
     if prev_vals is None:
-        return [get_params_full().get("STROKE_OFFSET", 50000)] * NUM_SERVOS
+        return [get_params_full().get("STROKE_OFFSET", 50000)] * get_params_full().get("NUM_SERVOS", 31)    
     return prev_vals
 
 
@@ -50,9 +49,9 @@ def send_all_setTargetPositionList(vals):
 
     set_prev_vals(vals)
 
-    mapped_vals = [0] * NUM_SERVOS
+    mapped_vals = [0] * get_params_full().get("NUM_SERVOS", 31)
     motor_position_mapping = MOTOR_POSITION_MAPPING
-    for i in range(NUM_SERVOS):
+    for i in range(get_params_full().get("NUM_SERVOS", 31)):
         mapped_vals[i] = (
             vals[i] if motor_position_mapping == {} else vals[motor_position_mapping[i]]
         )
@@ -216,7 +215,7 @@ def osc_sender(stop_event):
             if easing_duration > 0.0:
                 u = -easing_duration
                 easing_from = get_prev_vals()
-                easing_to = make_frame(0, NUM_SERVOS)
+                easing_to = make_frame(0, get_params_full().get("NUM_SERVOS", 31))
             else:
                 u = 0.0
             u_t_keep = 0
@@ -250,9 +249,9 @@ def osc_sender(stop_event):
 
             u += u_t_rate * dt
 
-            raw_vals = make_frame(u, NUM_SERVOS)
+            raw_vals = make_frame(u, get_params_full().get("NUM_SERVOS", 31))
         else:
-            for i in range(NUM_SERVOS):
+            for i in range(get_params_full().get("NUM_SERVOS", 31)):
                 raw_vals[i] = easing_from[i] * (
                     1 - (u_t_keep / easing_duration)
                 ) + easing_to[i] * (u_t_keep / easing_duration)
