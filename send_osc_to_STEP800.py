@@ -4,9 +4,9 @@ from pythonosc.osc_server import BlockingOSCUDPServer
 import threading
 import time
 
-HOST = "10.0.0.100"
+HOST = "10.0.0.102"
 PORT_SEND = 50000
-PORT_RECEIVE = 50100
+PORT_RECEIVE = 50102
 
 client = SimpleUDPClient(HOST, PORT_SEND)
 
@@ -24,6 +24,7 @@ def start_receiver(port: int = 50100):
     Returns (server, thread).
     """
     dispatcher = Dispatcher()
+
 
     def _print_handler(address, *msg_args):
         try:
@@ -53,10 +54,13 @@ def main():
 
 
 if __name__ == "__main__":
+    sendosc("/setDestIp", [])
     start_receiver(PORT_RECEIVE)
     print(f"HOST:{HOST} SEND:{PORT_SEND} RECEIVE:{PORT_RECEIVE}")
 
-    main()
+    #main()
+
+    sendosc("/getVersion", [])
 
     print("Listening... Press Ctrl+C to exit.")
     try:

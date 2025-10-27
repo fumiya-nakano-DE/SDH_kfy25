@@ -1,5 +1,5 @@
 {
-  "MODE": "422",
+  "MODE": "102",
   "MODES": {
     "101": {
       "NAME": "Simple sin",
@@ -307,14 +307,14 @@
     50103
   ],
   "NUM_SERVOS": 31,
-  "RATE_fps": 60,
+  "RATE_fps": 24,
   "ALPHA": 0.3,
   "Kp": 0.06,
   "Ki": 0.0,
-  "Kd": 0.0,
+  "Kd": 0.01,
   "STROKE_OFFSET": 50000,
-  "SEND_CLIENTS": false,
-  "SEND_CLIENT_GH": true,
+  "SEND_CLIENTS": true,
+  "SEND_CLIENT_GH": false,
   "LIMIT_ABSOLUTE": 105000,
   "LIMIT_RELATIONAL": 150000,
   "LIMIT_SPEED": 80000

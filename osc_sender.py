@@ -40,6 +40,8 @@ def get_clients():
     ]
 
 
+clients = get_clients()
+
 def get_client_gh():
     return SimpleUDPClient(get_params_full()["HOST"], int(get_params_full()["PORT"]))
 
@@ -58,12 +60,20 @@ def send_all_setTargetPositionList(vals):
     sent_boards = False
     sent_gh = False
     if get_params_full().get("SEND_CLIENTS", True):
-        clients = get_clients()
         for i, client in enumerate(clients):
 
             vals_part = mapped_vals[i * VALS_PER_HOST : (i + 1) * VALS_PER_HOST]
 
             try:
+                # Some boards expect a fixed number of arguments (VALS_PER_HOST).
+                # If the last board receives fewer values (because NUM_SERVOS
+                # is not a multiple of VALS_PER_HOST), pad the list with the
+                # stroke offset so the board receives the expected count and
+                # does not raise an OSC syntax error.
+                if len(vals_part) < VALS_PER_HOST:
+                    pad_val = int(get_params_full().get("STROKE_OFFSET", 50000))
+                    vals_part = vals_part + [pad_val] * (VALS_PER_HOST - len(vals_part))
+
                 client.send_message("/setTargetPositionList", vals_part)
                 sent_boards = True
             except Exception as e:

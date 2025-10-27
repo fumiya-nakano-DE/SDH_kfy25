@@ -424,19 +424,20 @@ def init(enable=True):
 
         for client in clients:
             client.send_message("/resetDevice", [])
+            time.sleep(0.1)
         if not wait_for_booted(booted_ports, expected_ports):
             raise RuntimeError(
                 f"/booted not received from all devices. Only from: {sorted(booted_ports)}"
             )
         for client in clients:
             client.send_message("/setDestIp", [])
-            time.sleep(0.1)
             client.send_message(
                 # "/setKval", [255, 60, 119, 119, 119] #SM42BYG011
                 # "/setKval", [255, 60, 85, 85, 85] #42HSC1409
                 "/setKval",
                 # [255, 25, 75, 75, 75],  # SS2421 12V
-                [255, 10, 25, 25, 25],  # SS2421 24V-Low
+                # [255, 10, 25, 25, 25],  # SS2421 24V-Low
+                [255, 8, 18, 18, 18],  # SS2421 24V-Low-75%
             )  # (int)motorID (int)holdKVAL (int)runKVAL (int)accKVAL (int)setDecKVAL
             client.send_message("/setGoUntilTimeout", [255, 20000])
             # client.send_message("/setHomingDirection", [255, 0])
@@ -455,6 +456,7 @@ def init(enable=True):
         client.send_message("/enableServoMode", [255, enable])
         if not enable:
             client.send_message("/softHiZ", 255)
+    
     set_PID()
 
 

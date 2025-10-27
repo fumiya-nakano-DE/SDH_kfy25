@@ -13,7 +13,7 @@ HOSTS = [f"10.0.0.10{i}" for i in range(0, 4)]
 OSC_RECV_PORTS = [i for i in range(50100, 50104)]
 
 VALS_PER_HOST = 8
-NUM_SERVOS = 32
+NUM_SERVOS = 31
 # MOTOR_POSITION_MAPPING = [i for i in range(NUM_SERVOS - 1, -1, -1)]
 MOTOR_POSITION_MAPPING = [i for i in range(NUM_SERVOS)]
 
