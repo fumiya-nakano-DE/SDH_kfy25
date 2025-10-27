@@ -247,6 +247,12 @@ function sendHalt() {
         });
 }
 
+function applyAdvancedVisibility(enabled) {
+    document.querySelectorAll('.advanced-only').forEach(el => {
+        el.style.display = enabled ? '' : 'none';
+    });
+}
+
 socket.on('param_update', function (data) {
     const { key, value } = data;
     console.log(`Param updated: ${key} = ${value}`);
@@ -276,6 +282,21 @@ window.addEventListener('DOMContentLoaded', function () {
 
     const motorIdInput = document.getElementById('motor-id-input');
     if (motorIdInput) motorIdInput.addEventListener('change', getTargetPosition);
+
+    const advChk = document.getElementById('chk-advanced');
+    const saved = localStorage.getItem('advancedMode');
+    const advancedOn = saved ? saved === '1' : false;
+    if (advChk) {
+        advChk.checked = advancedOn;
+        applyAdvancedVisibility(advChk.checked);
+        advChk.addEventListener('change', (e) => {
+            const on = e.target.checked;
+            localStorage.setItem('advancedMode', on ? '1' : '0');
+            applyAdvancedVisibility(on);
+        });
+    } else {
+        applyAdvancedVisibility(false);
+    }
 
     setFormEnabled(true);
 

@@ -25,35 +25,42 @@
 <body>
     <form id="mainForm" onsubmit="event.preventDefault(); customSubmit();">
         <label>
+            <i class="fa-solid fa-user-gear"></i>
+            <span>Advanced mode</span>
+            <input id="chk-advanced" type="checkbox" checked="false">
+        </label>
+        <hr class="advanced-only">
+
+        <label  class="advanced-only">
             <i class="fas fa-bullseye"></i>
             <span>Targets</span>
             <span style="display: flex; align-items: center; gap: 1em;">
                 <label style="display: flex; align-items: center; margin: 0;">
-                    <input id="chk_boards" type="checkbox" data-param="SEND_CLIENTS" {% if SEND_CLIENTS %}checked{%
-                        endif %} onchange="updateParam(this)">
+                    <input id="chk_boards" type="checkbox" data-param="SEND_CLIENTS" {% if SEND_CLIENTS %}checked{% endif %} onchange="updateParam(this)">
                     <span style="min-width:4em;">boards</span>
                 </label>
             </span>
             <span style="display: flex; align-items: center; gap: 1em;">
                 <label style="display: flex; align-items: center; margin: 0;">
-                    <input id="chk_gh" type="checkbox" data-param="SEND_CLIENT_GH" {% if SEND_CLIENT_GH %}checked{%
-                        endif %} onchange="updateParam(this)">
+                    <input id="chk_gh" type="checkbox" data-param="SEND_CLIENT_GH" {% if SEND_CLIENT_GH %}checked{% endif %} onchange="updateParam(this)">
                     <span style="min-width:4em;">gh</span>
                 </label>
             </span>
         </label>
-        <label>
+
+
+        <label  class="advanced-only">
             <i class="fas fa-cogs"></i>
             <span>NUM_SERVOS</span>
             <input id="NUM_SERVOS" name="NUM_SERVOS" value="{{NUM_SERVOS}}" {% if running %}readonly{% endif %}>
         </label>
-        <label>
+        <label class="advanced-only">
             <i class="fas fa-film"></i>
             <span>RATE_fps</span>
             <input id="RATE_fps" name="RATE_fps" value="{{RATE_fps}}" {% if running %}readonly{% endif %}>
         </label>
-        <hr>
-        <label>
+        <hr class="advanced-only">
+        <label class="advanced-only">
             <i class="fas fa-arrows-alt-h"></i>
             <span>STROKE_OFFSET</span>
             <input id="STROKE_OFFSET" type="range" min="0" max="100000" step="100" value="{{ STROKE_OFFSET }}"
@@ -61,7 +68,7 @@
                 oninput="updateParam(this)">
             <output id="STROKE_OFFSET_out">{{ STROKE_OFFSET }}</output>
         </label>
-        <label>
+        <label class="advanced-only">
             <i class="fa-solid fa-road-barrier"></i>
             <span>LIMIT_ABSOLUTE</span>
             <input id="LIMIT_ABSOLUTE" type="range" min="0" max="200000" step="100" value="{{ LIMIT_ABSOLUTE }}"
@@ -69,7 +76,7 @@
                 oninput="updateParam(this)">
             <output id="LIMIT_ABSOLUTE_out">{{ LIMIT_ABSOLUTE }}</output>
         </label>
-        <label>
+        <label class="advanced-only">
             <i class="fa-solid fa-arrows-left-right"></i>
             <span>LIMIT_RELATIONAL</span>
             <input id="LIMIT_RELATIONAL" type="range" min="0" max="200000" step="100" value="{{ LIMIT_RELATIONAL }}"
@@ -77,7 +84,7 @@
                 oninput="updateParam(this)">
             <output id="LIMIT_RELATIONAL_out">{{ LIMIT_RELATIONAL }}</output>
         </label>
-        <label>
+        <label class="advanced-only">
             <i class="fas fa-tachometer-alt"></i>
             <span>LIMIT_SPEED</span>
             <input id="LIMIT_SPEED" type="range" min="0" max="100000" step="1000" value="{{ LIMIT_SPEED }}"
@@ -85,29 +92,29 @@
                 oninput="updateParam(this)">
             <output id="LIMIT_SPEED_out">{{ LIMIT_SPEED }}</output>
         </label>
-        <label>
+        <label class="advanced-only">
             <i class="fas fa-filter"></i>
             <span>LPF ALPHA</span>
             <input id="ALPHA" type="range" min="0" max="1" step="0.01" value="{{ ALPHA }}" name="ALPHA"
                 data-param="ALPHA" data-endpoint="/set_alpha" data-output="ALPHA_out" oninput="updateParam(this)">
             <output id="ALPHA_out">{{ ALPHA }}</output>
         </label>
-        <hr>
-        <label>
+        <hr class="advanced-only">
+        <label class="advanced-only">
             <i class="fas fa-sliders-h"></i>
             <span>Kp</span>
             <input id="Kp" type="range" min="0" max="0.5" step="0.01" value="{{ Kp }}" data-param="Kp"
                 data-output="Kp_out" oninput="updateParam(this)">
             <output id="Kp_out">{{ Kp }}</output>
         </label>
-        <label>
+        <label class="advanced-only">
             <i class="fas fa-sliders-h"></i>
             <span>Ki</span>
             <input id="Ki" type="range" min="0" max="0.5" step="0.01" value="{{ Ki }}" data-param="Ki"
                 data-output="Ki_out" oninput="updateParam(this)">
             <output id="Ki_out">{{ Ki }}</output>
         </label>
-        <label>
+        <label class="advanced-only">
             <i class="fas fa-sliders-h"></i>
             <span>Kd</span>
             <input id="Kd" type="range" min="0" max="0.5" step="0.01" value="{{ Kd }}" data-param="Kd"
@@ -115,7 +122,7 @@
             <output id="Kd_out">{{ Kd }}</output>
         </label>
 
-        <button type="button" onclick="sendStep()" {% if running %}disabled{% endif %}>
+        <button type="button" class="advanced-only" onclick="sendStep()" {% if running %}disabled{% endif %}>
             <i class="fas fa-step-backward"></i><i class="fas fa-step-forward"></i> Step
         </button>
         <hr style="border-top: 3px double">
@@ -275,7 +282,7 @@
         </span>
     </form>
     <br>
-    <form id="independentControllerForm">
+    <form id="independentControllerForm" class="advanced-only">
         <div style="margin-bottom:1em;">
             <label>
                 <i class="fas fa-dot-circle"></i>

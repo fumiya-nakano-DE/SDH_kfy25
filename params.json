@@ -1,5 +1,5 @@
 {
-  "MODE": "102",
+  "MODE": "101",
   "MODES": {
     "101": {
       "NAME": "Simple sin",
@@ -307,7 +307,7 @@
     50103
   ],
   "NUM_SERVOS": 31,
-  "RATE_fps": 24,
+  "RATE_fps": 60,
   "ALPHA": 0.3,
   "Kp": 0.06,
   "Ki": 0.0,
