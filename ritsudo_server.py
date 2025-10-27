@@ -142,12 +142,12 @@ def position_broadcast_worker(stop_event):
                 stroke_offset = params_full.get("STROKE_OFFSET", 50000)
                 # Calculate relative positions from offset
                 relative_positions = [int(pos - stroke_offset) for pos in positions]
-                
-                socketio.emit('servo_positions', {
-                    'positions': relative_positions,
-                    'offset': stroke_offset
-                })
-            
+
+                socketio.emit(
+                    "servo_positions",
+                    {"positions": relative_positions, "offset": stroke_offset},
+                )
+
             time.sleep(0.1)  # 10Hz update rate
         except Exception as e:
             logger.error(f"Position broadcast error: {e}")
@@ -161,7 +161,7 @@ def start_position_broadcast():
         position_broadcast_thread = Thread(
             target=position_broadcast_worker,
             args=(position_broadcast_stop,),
-            daemon=True
+            daemon=True,
         )
         position_broadcast_thread.start()
         logger.info("Position broadcast thread started.")
@@ -337,7 +337,7 @@ def homing_endpoint():
 
 
 def home_all():
-    
+
     def _handle_homing_result(motor_id, status, list_success, list_index):
         try:
             ok = status is not None and int(status) == 3
@@ -363,14 +363,17 @@ def home_all():
 
         if n % 2 == 0 and i == half - 1:
             status_1 = homing(motorID_1)
-            boolSuccess = _handle_homing_result(motorID_1, status_1, listSuccess, i
-                                                ) or boolSuccess
+            boolSuccess = (
+                _handle_homing_result(motorID_1, status_1, listSuccess, i)
+                or boolSuccess
+            )
             setNeutral()
 
             status_2 = homing(motorID_2)
-            boolSuccess = _handle_homing_result(
-                motorID_2, status_2, listSuccess, n - 1 - i
-            ) or boolSuccess
+            boolSuccess = (
+                _handle_homing_result(motorID_2, status_2, listSuccess, n - 1 - i)
+                or boolSuccess
+            )
 
         else:
             t1 = Thread(target=homing, args=(motorID_1,))
@@ -383,10 +386,14 @@ def home_all():
             status_1 = get_latest_homing_status(motorID_1)
             status_2 = get_latest_homing_status(motorID_2)
 
-            boolSuccess = _handle_homing_result(motorID_1, status_1, listSuccess, i) or boolSuccess
-            boolSuccess = _handle_homing_result(
-                motorID_2, status_2, listSuccess, n - 1 - i
-            ) or boolSuccess
+            boolSuccess = (
+                _handle_homing_result(motorID_1, status_1, listSuccess, i)
+                or boolSuccess
+            )
+            boolSuccess = (
+                _handle_homing_result(motorID_2, status_2, listSuccess, n - 1 - i)
+                or boolSuccess
+            )
 
         setNeutral()
         logger.info("homing-all progress: [%s]", " ".join(listSuccess))
@@ -394,7 +401,9 @@ def home_all():
     if n % 2 == 1:
         mid_id = MOTOR_POSITION_MAPPING[half] + 1
         status = homing(mid_id)
-        boolSuccess = _handle_homing_result(mid_id, status, listSuccess, half) or boolSuccess
+        boolSuccess = (
+            _handle_homing_result(mid_id, status, listSuccess, half) or boolSuccess
+        )
         setNeutral()
 
     if not boolSuccess:
@@ -481,7 +490,7 @@ def init(enable=True):
             client.send_message("/resetDevice", [])
             time.sleep(0.1)
         if not wait_for_booted(booted_ports, expected_ports):
-            raise RuntimeError(
+            logger.error(
                 f"/booted not received from all devices. Only from: {sorted(booted_ports)}"
             )
         for client in clients:
@@ -511,8 +520,12 @@ def init(enable=True):
         client.send_message("/enableServoMode", [255, enable])
         if not enable:
             client.send_message("/softHiZ", 255)
-    
+
     set_PID()
+
+    if enable:
+        osc_speaker.send_message("/Initialized", 1)
+        logger.info("Initialized and enabled servos.")
 
 
 @app.route("/init", methods=["POST"])
@@ -625,13 +638,13 @@ def socket_update_param(key, value):
 
 
 # --- SocketIO Events ---
-@socketio.on('connect')
+@socketio.on("connect")
 def handle_connect():
     """Handle client connection - notify if server just started"""
     logger.debug("Client connected to WebSocket")
 
 
-@socketio.on('disconnect')
+@socketio.on("disconnect")
 def handle_disconnect():
     """Handle client disconnection"""
     logger.debug("Client disconnected from WebSocket")
@@ -714,8 +727,9 @@ def handle_bundle(bundle_contents):
                 except Exception as e:
                     logger.warning(f"Failed to update param '{key}': {e}")
 
+
 def main():
-    
+
     try:
         print("Starting Ritsudo Server...")
         logger.info("Ritsudo Server is starting.")
@@ -723,7 +737,7 @@ def main():
         register_message_callback(listener_message_callback)
         register_bundle_callback(handle_bundle)
         start_osc_listener_thread()
-        
+
         start_osc_receiver_thread()
 
         web_host = os.getenv("WEB_HOST", "0.0.0.0")
