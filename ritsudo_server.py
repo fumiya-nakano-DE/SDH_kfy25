@@ -472,7 +472,6 @@ def init(enable=True):
 
     if enable:
         register_booted_callback(on_booted)
-        start_osc_receiver_thread()
 
         expected_ports = 1
 
@@ -625,6 +624,19 @@ def socket_update_param(key, value):
         socketio.emit("param_update", {"key": key, "value": value})
 
 
+# --- SocketIO Events ---
+@socketio.on('connect')
+def handle_connect():
+    """Handle client connection - notify if server just started"""
+    logger.debug("Client connected to WebSocket")
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle client disconnection"""
+    logger.debug("Client disconnected from WebSocket")
+
+
 def listener_message_callback(address, *args):
     params_full = get_params_full()
     params_mode = get_params_mode()
@@ -702,9 +714,8 @@ def handle_bundle(bundle_contents):
                 except Exception as e:
                     logger.warning(f"Failed to update param '{key}': {e}")
 
-
-# --- MAIN ---
-if __name__ == "__main__":
+def main():
+    
     try:
         print("Starting Ritsudo Server...")
         logger.info("Ritsudo Server is starting.")
@@ -712,6 +723,8 @@ if __name__ == "__main__":
         register_message_callback(listener_message_callback)
         register_bundle_callback(handle_bundle)
         start_osc_listener_thread()
+        
+        start_osc_receiver_thread()
 
         web_host = os.getenv("WEB_HOST", "0.0.0.0")
         web_port = int(os.getenv("WEB_PORT", "5000"))
@@ -734,3 +747,8 @@ if __name__ == "__main__":
 
     except Exception:
         logger.info("Ritsudo Server is shutting down.")
+
+
+# --- MAIN ---
+if __name__ == "__main__":
+    main()

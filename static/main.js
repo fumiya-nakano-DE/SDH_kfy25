@@ -356,6 +356,26 @@ socket.on('servo_positions', function (data) {
     updateServoVisualization(data.positions, data.offset);
 });
 
+// Handle server reconnection - reload page when server restarts
+socket.on('connect', function() {
+    console.log('Connected to server');
+    
+    // Check if this is a reconnection (not initial page load)
+    const wasConnected = sessionStorage.getItem('wasConnected');
+    if (wasConnected === 'true') {
+        console.log('Server reconnected - reloading page');
+        sessionStorage.removeItem('wasConnected');
+        window.location.reload();
+    } else {
+        // Mark as connected for future reconnection detection
+        sessionStorage.setItem('wasConnected', 'true');
+    }
+});
+
+socket.on('disconnect', function() {
+    console.log('Disconnected from server');
+});
+
 window.addEventListener('DOMContentLoaded', function () {
 
     window.addEventListener('keydown', function (event) {
