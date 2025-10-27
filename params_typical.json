@@ -335,7 +335,7 @@
   "ALPHA": 0.3,
   "Kp": 0.06,
   "Ki": 0.0,
-  "Kd": 0.0,
+  "Kd": 0.01,
   "STROKE_OFFSET": 50000,
   "SEND_CLIENTS": true,
   "SEND_CLIENT_GH": true,
