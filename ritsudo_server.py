@@ -496,7 +496,7 @@ def init(enable=True):
             )  # (int)motorID (int)holdKVAL (int)runKVAL (int)accKVAL (int)setDecKVAL
             client.send_message("/setGoUntilTimeout", [255, 20000])
             # client.send_message("/setHomingDirection", [255, 0])
-            client.send_message("/setHomingSpeed", [255, 200])
+            client.send_message("/setHomingSpeed", [255, 100])
             client.send_message(
                 "/setPosition", [255, int(params_full.get("STROKE_OFFSET", 50000))]
             )
