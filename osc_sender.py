@@ -207,13 +207,11 @@ def osc_sender(stop_event):
             or get_repeat_mode()
         ):
             if get_repeat_mode():
-                print(f"\nRepeat mode set due to MODE change\n")
                 set_repeat_mode(False)
             starting_motion = False
 
             mode = get_params_full().get("MODE")
-            print(f"=== MODE: {mode} ===")
-            logger.info("Switched to mode %s", mode)
+            logger.info("Switched to mode %s =====", mode)
             easing_duration = get_params_mode().get("EASING_DURATION", 1.0)
             if easing_duration > 0.0:
                 u = -easing_duration

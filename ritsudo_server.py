@@ -104,7 +104,7 @@ def wait_for_homing_complete(motor_id, timeout=12.0, poll_interval=0.05):
     end_time = time.time() + float(timeout)
     while time.time() < end_time:
         st = get_latest_homing_status(motor_id)
-        print("\rHoming status for motor %d: %s", motor_id, st, end="")
+        print(f"\rHoming status for motor {motor_id}: {st}", end="")
         if st is not None and int(st) >= 3:
             return int(st)
         time.sleep(poll_interval)
@@ -288,12 +288,25 @@ def homing_endpoint():
 
 
 def home_all():
+    
+    def _handle_homing_result(motor_id, status, list_success, list_index):
+        try:
+            ok = status is not None and int(status) == 3
+        except Exception:
+            ok = False
+        if ok:
+            list_success[list_index] = "o"
+            return True
+        disable_motor(motor_id)
+        list_success[list_index] = "x"
+        return False
 
     setNeutral()
 
     n = len(MOTOR_POSITION_MAPPING)
     half = n // 2
     boolSuccess = False
+    listSuccess = ["_"] * n
 
     for i in range(half):
         motorID_1 = MOTOR_POSITION_MAPPING[i] + 1
@@ -301,17 +314,15 @@ def home_all():
 
         if n % 2 == 0 and i == half - 1:
             status_1 = homing(motorID_1)
-            if status_1 is None or int(status_1) != 3:
-                disable_motor(motorID_1)
-            else:
-                boolSuccess = True
+            boolSuccess = _handle_homing_result(motorID_1, status_1, listSuccess, i
+                                                ) or boolSuccess
             setNeutral()
 
             status_2 = homing(motorID_2)
-            if status_2 is None or int(status_2) != 3:
-                disable_motor(motorID_2)
-            else:
-                boolSuccess = True
+            boolSuccess = _handle_homing_result(
+                motorID_2, status_2, listSuccess, n - 1 - i
+            ) or boolSuccess
+
         else:
             t1 = Thread(target=homing, args=(motorID_1,))
             t2 = Thread(target=homing, args=(motorID_2,))
@@ -322,23 +333,19 @@ def home_all():
 
             status_1 = get_latest_homing_status(motorID_1)
             status_2 = get_latest_homing_status(motorID_2)
-            if status_1 is None or int(status_1) != 3:
-                disable_motor(motorID_1)
-            else:
-                boolSuccess = True
-            if status_2 is None or int(status_2) != 3:
-                disable_motor(motorID_2)
-            else:
-                boolSuccess = True
+
+            boolSuccess = _handle_homing_result(motorID_1, status_1, listSuccess, i) or boolSuccess
+            boolSuccess = _handle_homing_result(
+                motorID_2, status_2, listSuccess, n - 1 - i
+            ) or boolSuccess
 
         setNeutral()
+        logger.info("homing-all progress: [%s]", " ".join(listSuccess))
 
     if n % 2 == 1:
-        status = homing(MOTOR_POSITION_MAPPING[half] + 1)
-        if status is None or int(status) != 3:
-            disable_motor(MOTOR_POSITION_MAPPING[half] + 1)
-        else:
-            boolSuccess = True
+        mid_id = MOTOR_POSITION_MAPPING[half] + 1
+        status = homing(mid_id)
+        boolSuccess = _handle_homing_result(mid_id, status, listSuccess, half) or boolSuccess
         setNeutral()
 
     if not boolSuccess:
@@ -346,7 +353,7 @@ def home_all():
         osc_speaker.send_message("/Homed", -1)
         return {"result": "NG", "error": "Homing failed for all motors"}
 
-    logger.info("homing-all finished.")
+    logger.info("homing-all completed: [%s]", " ".join(listSuccess))
     osc_speaker.send_message("/Homed", 1)
     return {"result": "OK"}
 
