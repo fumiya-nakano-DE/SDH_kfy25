@@ -27,6 +27,20 @@
       "FUNC": "azimuth",
       "AMP_MODE": "solid"
     },
+    "103": {
+      "NAME": "Azimuth slide(Variable)",
+      "EASING_DURATION": 1.0,
+      "BASE_FREQ": 0.2,
+      "U_AVERAGE": 1.0,
+      "U_WIDTH": 0,
+      "U_FREQUENTNESS": 0.0,
+      "DIRECTION": 1,
+      "PHASE_RATE": 0.0,
+      "PARAM_B": 0.0,
+      "STROKE_LENGTH": 20000,
+      "FUNC": "azimuth_variable",
+      "AMP_MODE": "solid"
+    }, 
     "111": {
       "NAME": "Coned Sin",
       "EASING_DURATION": 1.0,

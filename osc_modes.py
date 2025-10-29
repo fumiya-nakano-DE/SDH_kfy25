@@ -128,6 +128,14 @@ def azimuth_phase(i):
     return (i % 3) / 3 * math.pi * 2
 
 
+def azimuth_phase_variable(i, f):
+    if f < 0:
+        f = 0
+    elif f > 1:
+        f = 1
+    return (i % 3) / 3 * f * math.pi * 2
+
+
 # -------------------------
 # Location-based effects
 # -------------------------
@@ -180,6 +188,7 @@ def sin(t, num_servos):
     return np.array(vals, dtype=float)
 
 
+
 def azimuth(t, num_servos):
     def azimuth_core(i, num_servos, t, rate):
         return math.sin(
@@ -192,6 +201,18 @@ def azimuth(t, num_servos):
     vals = [azimuth_core(i, num_servos, t_mod, rate) for i in range(num_servos)]
     return np.array(vals, dtype=float)
 
+def azimuth_variable(t, num_servos):
+    def azimuth_core(i, num_servos, t, rate):
+        f = float(get_params_mode().get("PARAM_B", 0.0))
+        return math.sin(
+            2 * math.pi * rate * t + azimuth_phase_variable(i, f) + phase(i, num_servos)
+        )
+        
+    cycle = cycle_from_params()
+    t_mod = t % cycle
+    rate = base_freq()
+    vals = [azimuth_core(i, num_servos, t_mod, rate) for i in range(num_servos)]
+    return np.array(vals, dtype=float)
 
 def soliton(t, num_servos):
     period = cycle_from_params()
