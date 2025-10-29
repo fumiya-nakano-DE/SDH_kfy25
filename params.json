@@ -1,11 +1,11 @@
 {
-  "MODE": "103",
+  "MODE": 102,
   "MODES": {
     "101": {
       "NAME": "Simple sin",
-      "EASING_DURATION": 1.0,
+      "EASING_DURATION": 5.0,
       "BASE_FREQ": 0.20000000298023224,
-      "U_AVERAGE": 0.79,
+      "U_AVERAGE": 1.0,
       "U_WIDTH": 0.0,
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
@@ -17,13 +17,13 @@
     "102": {
       "NAME": "Azimuth slide",
       "EASING_DURATION": 1.0,
-      "BASE_FREQ": 0.20000000298023224,
-      "U_AVERAGE": 1.0,
+      "BASE_FREQ": 0.2,
+      "U_AVERAGE": 0.5,
       "U_WIDTH": 0,
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
-      "PHASE_RATE": 0.0,
-      "STROKE_LENGTH": 19000,
+      "PHASE_RATE": 0.5,
+      "STROKE_LENGTH": 1000,
       "FUNC": "azimuth",
       "AMP_MODE": "solid"
     },
@@ -36,7 +36,7 @@
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
       "PHASE_RATE": 0.84,
-      "PARAM_B": 0.2,
+      "PARAM_B": 0.0,
       "STROKE_LENGTH": 13000,
       "FUNC": "azimuth_variable",
       "AMP_MODE": "solid"
@@ -49,7 +49,7 @@
       "U_WIDTH": 0,
       "U_FREQUENTNESS": 0.0,
       "DIRECTION": 1,
-      "PHASE_RATE": 2.27,
+      "PHASE_RATE": 0.84,
       "STROKE_LENGTH": 18000,
       "FUNC": "sin",
       "AMP_MODE": "cone",
@@ -68,6 +68,21 @@
       "FUNC": "azimuth",
       "AMP_MODE": "cone",
       "AMP_PARAM_A": 0.25
+    },
+    "113": {
+      "NAME": "Coned Azimuth slide (Variable)",
+      "EASING_DURATION": 1.0,
+      "BASE_FREQ": 0.2,
+      "U_AVERAGE": 1.0,
+      "U_WIDTH": 0,
+      "U_FREQUENTNESS": 0.0,
+      "DIRECTION": 1,
+      "PHASE_RATE": 0.0,
+      "PARAM_B": 0.0,
+      "STROKE_LENGTH": 3000,
+      "FUNC": "azimuth_variable",
+      "AMP_MODE": "cone",
+      "AMP_PARAM_A": 0.0
     },
     "121": {
       "NAME": "Sined Sin",
@@ -327,7 +342,7 @@
   "Ki": 0.0,
   "Kd": 0.01,
   "STROKE_OFFSET": 50000,
-  "SEND_CLIENTS": false,
+  "SEND_CLIENTS": true,
   "SEND_CLIENT_GH": true,
   "LIMIT_ABSOLUTE": 120600,
   "LIMIT_RELATIONAL": 123900,

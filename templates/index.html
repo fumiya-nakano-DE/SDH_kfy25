@@ -183,7 +183,7 @@
         <label>
             <i class="fas fa-sync-alt"></i>
             <span>PHASE_RATE</span>
-            <input id="PHASE_RATE" type="range" min="0" max="8" step="0.1" value="{{ PHASE_RATE }}"
+            <input id="PHASE_RATE" type="range" min="0" max="8" step="0.01" value="{{ PHASE_RATE }}"
                 data-param="PHASE_RATE" data-endpoint="/set_phase_rate" data-output="PHASE_RATE_out"
                 oninput="updateParam(this)">
             <output id="PHASE_RATE_out">{{ PHASE_RATE }}</output>
@@ -206,7 +206,7 @@
         <label>
             <i class="fa-solid fa-ruler-horizontal"></i>
             <span>STROKE_LENGTH</span>
-            <input id="STROKE_LENGTH" type="range" min="1000" max="50000" step="1000" value="{{ STROKE_LENGTH }}"
+            <input id="STROKE_LENGTH" type="range" min="0" max="50000" step="100" value="{{ STROKE_LENGTH }}"
                 data-param="STROKE_LENGTH" data-endpoint="/set_stroke_length" data-output="STROKE_LENGTH_out"
                 oninput="updateParam(this)">
             <output id="STROKE_LENGTH_out">{{ STROKE_LENGTH }}</output>
