@@ -52,6 +52,9 @@ osc_thread = None
 stop_event = Event()
 position_broadcast_thread = None
 position_broadcast_stop = Event()
+home_all_thread = None
+home_all_stop = Event()
+home_all_result = None
 
 
 # --- Helpers ---
@@ -106,7 +109,6 @@ def wait_for_homing_complete(motor_id, timeout=12.0, poll_interval=0.05):
     end_time = time.time() + float(timeout)
     while time.time() < end_time:
         st = get_latest_homing_status(motor_id)
-        print(f"\rHoming status for motor {motor_id}: {st}", end="")
         if st is not None and int(st) >= 3:
             return int(st)
         time.sleep(poll_interval)
@@ -266,7 +268,6 @@ def setNeutral():
             send_all_setTargetPositionList(current_vals)
         step_time = max(step_time + interval, time.time())
         sleep_time = max(step_time - time.time(), 0)
-        print(f"\rSetting neutral positions: {sleep_time:.2f}s", end="")
         if sleep_time > 0:
             time.sleep(sleep_time)
     set_prev_vals(target_vals)
@@ -368,6 +369,11 @@ def home_all():
         list_success[list_index] = "x"
         return False
 
+    # Check if stop was requested
+    if home_all_stop.is_set():
+        logger.info("home_all cancelled before starting")
+        return {"result": "CANCELLED", "error": "home_all was cancelled by init"}
+
     setNeutral()
 
     n = len(MOTOR_POSITION_MAPPING)
@@ -376,6 +382,11 @@ def home_all():
     listSuccess = ["_"] * n
 
     for i in range(half):
+        # Check if stop was requested
+        if home_all_stop.is_set():
+            logger.info("home_all cancelled during execution")
+            return {"result": "CANCELLED", "error": "home_all was cancelled by init"}
+
         motorID_1 = MOTOR_POSITION_MAPPING[i] + 1
         motorID_2 = MOTOR_POSITION_MAPPING[n - 1 - i] + 1
 
@@ -416,6 +427,11 @@ def home_all():
         setNeutral()
         logger.info("homing-all progress: [%s]", " ".join(listSuccess))
 
+    # Check if stop was requested before final motor
+    if home_all_stop.is_set():
+        logger.info("home_all cancelled during execution")
+        return {"result": "CANCELLED", "error": "home_all was cancelled by init"}
+
     if n % 2 == 1:
         mid_id = MOTOR_POSITION_MAPPING[half] + 1
         status = homing(mid_id)
@@ -434,9 +450,32 @@ def home_all():
     return {"result": "OK"}
 
 
+def _home_all_wrapper():
+    """Wrapper to execute home_all and store result"""
+    global home_all_result
+    home_all_result = home_all()
+
+
 @app.route("/home_all", methods=["POST", "GET"])
 def home_all_endpoint():
-    result = home_all()
+    global home_all_thread, home_all_stop, home_all_result
+    
+    # Clear the stop event and result before starting
+    home_all_stop.clear()
+    home_all_result = None
+    
+    # Start home_all in a separate thread
+    home_all_thread = Thread(target=_home_all_wrapper, daemon=True)
+    home_all_thread.start()
+    
+    # Wait for completion (with timeout to handle edge cases)
+    home_all_thread.join(timeout=350)  # 5 minutes max
+    
+    # Return the result
+    result = home_all_result
+    if result is None:
+        result = {"result": "TIMEOUT", "error": "home_all execution timeout"}
+    
     if isinstance(result, tuple):
         body, code = result
         return jsonify(body), code
@@ -491,6 +530,15 @@ def set_PID():
 
 
 def init(enable=True):
+    global home_all_stop, home_all_thread
+    
+    # Stop any running home_all process
+    if home_all_thread is not None and home_all_thread.is_alive():
+        logger.info("Stopping running home_all process...")
+        home_all_stop.set()
+        home_all_thread.join(timeout=2)
+        logger.info("home_all process stopped")
+    
     clients = get_clients()
     booted_ports = set()
 
@@ -506,13 +554,14 @@ def init(enable=True):
 
         for client in clients:
             client.send_message("/resetDevice", [])
-            time.sleep(0.1)
+            time.sleep(0.05)
         if not wait_for_booted(booted_ports, expected_ports):
             logger.error(
                 f"/booted not received from all devices. Only from: {sorted(booted_ports)}"
             )
         for client in clients:
             client.send_message("/setDestIp", [])
+            time.sleep(0.05)
             Kval_normal = int(params_full.get("KVal_normal", 18))
             Kval_hold = int(params_full.get("KVal_hold", 8))
             client.send_message(
@@ -524,9 +573,12 @@ def init(enable=True):
                 # [255, 8, 18, 18, 18],  # SS2421 24V-Low-75%
                 [255, Kval_hold, Kval_normal, Kval_normal, Kval_normal],
             )  # (int)motorID (int)holdKVAL (int)runKVAL (int)accKVAL (int)setDecKVAL
+            time.sleep(0.05)
             client.send_message("/setGoUntilTimeout", [255, 20000])
+            time.sleep(0.05)
             # client.send_message("/setHomingDirection", [255, 0])
             client.send_message("/setHomingSpeed", [255, 100])
+            time.sleep(0.05)
             client.send_message(
                 "/setPosition", [255, int(params_full.get("STROKE_OFFSET", 50000))]
             )
@@ -539,6 +591,7 @@ def init(enable=True):
 
     for client in clients:
         client.send_message("/enableServoMode", [255, enable])
+        time.sleep(0.05)
         if not enable:
             client.send_message("/softHiZ", 255)
 
@@ -672,6 +725,8 @@ def handle_disconnect():
 
 
 def listener_message_callback(address, *args):
+    global home_all_thread, home_all_stop, home_all_result
+    
     params_full = get_params_full()
     params_mode = get_params_mode()
 
@@ -685,7 +740,16 @@ def listener_message_callback(address, *args):
         elif candidate == "Init":
             return init()
         elif candidate == "Home":
-            return home_all()
+            # Start home_all in a separate thread (non-blocking for OSC)
+            if home_all_thread is None or not home_all_thread.is_alive():
+                home_all_stop.clear()
+                home_all_result = None
+                home_all_thread = Thread(target=_home_all_wrapper, daemon=True)
+                home_all_thread.start()
+                logger.info("home_all started via OSC")
+            else:
+                logger.warning("home_all is already running")
+            return
         elif candidate == "Neutral":
             return setNeutral()
         elif candidate == "Release":
