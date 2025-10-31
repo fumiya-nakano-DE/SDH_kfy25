@@ -249,17 +249,27 @@ def halt_endpoint():
 def setNeutral():
     params_full = get_params_full()
     target_vals = [params_full.get("STROKE_OFFSET", 50000)] * params_full["NUM_SERVOS"]
-    alpha = float(params_full.get("ALPHA", 0.2)) * 0.5
-    interval = 1.0 / float(params_full["RATE_fps"])
+    interval = 0.05
+    step_per_second = params_full.get("NEUTRAL_SPEED", 20000) # Adjust for neutraling speed
+    step_per_cycle = step_per_second * interval
     stop()
-    while True and stop_event.is_set():
-        filt_vals = filter_vals(target_vals, alpha)
-        if get_prev_vals() is not None and filt_vals == get_prev_vals():
-            break
-        send_all_setTargetPositionList(filt_vals)
-        set_prev_vals(filt_vals)
-        time.sleep(interval)
-    send_all_setTargetPositionList(filt_vals)
+    current_vals = get_prev_vals() or target_vals
+    step_time = time.time()
+    while current_vals != target_vals:
+        for i in range(params_full["NUM_SERVOS"]):
+            if abs(target_vals[i] - current_vals[i]) < step_per_cycle:
+                current_vals[i] = target_vals[i]
+            elif target_vals[i] > current_vals[i]:
+                current_vals[i] += step_per_cycle
+            else:
+                current_vals[i] -= step_per_cycle
+            send_all_setTargetPositionList(current_vals)
+        step_time = max(step_time + interval, time.time())
+        sleep_time = max(step_time - time.time(), 0)
+        print(f"\rSetting neutral positions: {sleep_time:.2f}s", end="")
+        if sleep_time > 0:
+            time.sleep(sleep_time)
+    set_prev_vals(target_vals)
     gh_reset()
     logger.info("Set all motors to neutral position.")
     return
@@ -278,12 +288,15 @@ def homing(motor_id):
         return -1
 
     enable_servo(client, enable=False, broadcast=True)
+    client.send_message("/setKval", [local_id, 10, 25, 25, 25])
     reset_latest_homing_status(motor_id)
     client.send_message("/homing", [local_id])
-
     status = wait_for_homing_complete(
         motor_id, timeout=float(params_full.get("HOMING_TIMEOUT", 21.0))
     )
+    Kval_normal = int(params_full.get("KVal_normal", 18))
+    Kval_hold = int(params_full.get("KVal_hold", 8))
+    client.send_message("/setKval", [local_id, Kval_hold, Kval_normal, Kval_normal, Kval_normal])
     enable_servo(client, enable=True, broadcast=True)
 
     if status == 3:
@@ -500,13 +513,16 @@ def init(enable=True):
             )
         for client in clients:
             client.send_message("/setDestIp", [])
+            Kval_normal = int(params_full.get("KVal_normal", 18))
+            Kval_hold = int(params_full.get("KVal_hold", 8))
             client.send_message(
                 # "/setKval", [255, 60, 119, 119, 119] #SM42BYG011
                 # "/setKval", [255, 60, 85, 85, 85] #42HSC1409
                 "/setKval",
                 # [255, 25, 75, 75, 75],  # SS2421 12V
                 # [255, 10, 25, 25, 25],  # SS2421 24V-Low
-                [255, 8, 18, 18, 18],  # SS2421 24V-Low-75%
+                # [255, 8, 18, 18, 18],  # SS2421 24V-Low-75%
+                [255, Kval_hold, Kval_normal, Kval_normal, Kval_normal],
             )  # (int)motorID (int)holdKVAL (int)runKVAL (int)accKVAL (int)setDecKVAL
             client.send_message("/setGoUntilTimeout", [255, 20000])
             # client.send_message("/setHomingDirection", [255, 0])
