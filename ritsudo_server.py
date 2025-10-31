@@ -286,10 +286,12 @@ def homing(motor_id):
     params_full = get_params_full()
     client, local_id = get_motor_client_and_local_id(motor_id)
     if client is None:
+        logger.error("homing: motor_id %d out of range", motor_id)
         return -1
-
-    enable_servo(client, enable=False, broadcast=True)
+    logger.debug(f"Starting homing for motor {motor_id}")
+    enable_servo(client, enable=False, local_id=local_id, broadcast=False)
     client.send_message("/setKval", [local_id, 10, 25, 25, 25])
+    time.sleep(0.05)
     reset_latest_homing_status(motor_id)
     client.send_message("/homing", [local_id])
     status = wait_for_homing_complete(
@@ -298,7 +300,9 @@ def homing(motor_id):
     Kval_normal = int(params_full.get("KVal_normal", 18))
     Kval_hold = int(params_full.get("KVal_hold", 8))
     client.send_message("/setKval", [local_id, Kval_hold, Kval_normal, Kval_normal, Kval_normal])
-    enable_servo(client, enable=True, broadcast=True)
+    time.sleep(0.05)
+    enable_servo(client, enable=True, local_id=local_id, broadcast=False)
+    time.sleep(0.05)
 
     if status == 3:
         vals = get_prev_vals() or [0] * params_full["NUM_SERVOS"]
