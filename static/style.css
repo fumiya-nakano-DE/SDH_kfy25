@@ -15,7 +15,8 @@ form {
     border-radius: 8px;
     box-shadow: 0 2px 8px #0001;
     padding: 2em;
-    max-width: 400px;
+    max-width: 600px;
+    min-width: 400px;
     margin: 0 auto;
 }
 
@@ -40,15 +41,29 @@ label i {
 }
 
 label span {
-    min-width: 7em;
+    min-width: 9em;
     display: inline-block;
 }
 
 label input[type="range"],
 label input[type="text"],
-label input[type="number"] {
+label input[type="number"],
+label select {
     flex: 1 1 200px;
     margin: 0 0.5em;
+    max-width: 100%; 
+    min-width: 0;
+}
+
+label select {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+select option {
+    white-space: normal;
+    overflow-wrap: break-word;
 }
 
 label output {
@@ -93,4 +108,117 @@ button {
 .floating-button:hover {
     background-color: #c9302c;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.updated {
+    animation: flash 1s ease-in-out;
+}
+
+@keyframes flash {
+    0% {
+        background-color: #FF0;
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+/* Servo Position Visualization */
+#servo-visualizer {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px #0001;
+    padding: 1.5em;
+    max-width: 600px;
+    min-width: 400px;
+    margin: 0 auto;
+}
+
+#servo-visualizer h3 {
+    color: #2a4d7a;
+}
+
+#servo-bars-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    height: 120px;
+    background: linear-gradient(to bottom, transparent 49.5%, #999 49.5%, #999 50.5%, transparent 50.5%);
+    padding: 5px;
+    border-radius: 4px;
+    gap: 2px;
+    position: relative;
+}
+
+.servo-bar-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    flex: 1;
+    min-width: 8px;
+    position: relative;
+}
+
+.servo-bar {
+    width: 100%;
+    max-width: 20px;
+    transition: height 0.1s ease-out;
+    cursor: pointer;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.servo-bar.positive {
+    background: linear-gradient(to top, #2a5d9a, #4a7dc9);
+    border-radius: 2px 2px 0 0;
+    bottom: 50%;
+}
+
+.servo-bar.negative {
+    background: linear-gradient(to bottom, #9a2a2a, #c94a4a);
+    border-radius: 0 0 2px 2px;
+    top: 50%;
+}
+
+.servo-bar.positive:hover {
+    background: linear-gradient(to top, #4a7dba, #6a9de9);
+    box-shadow: 0 0 6px rgba(74, 125, 201, 0.8);
+}
+
+.servo-bar.negative:hover {
+    background: linear-gradient(to bottom, #ba4a4a, #e96a6a);
+    box-shadow: 0 0 6px rgba(201, 74, 74, 0.8);
+}
+
+.servo-bar-tooltip {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 0.7em;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 100;
+}
+
+.servo-bar.positive ~ .servo-bar-tooltip {
+    top: -25px;
+}
+
+.servo-bar.negative ~ .servo-bar-tooltip {
+    bottom: -25px;
+}
+
+.servo-bar-wrapper:hover .servo-bar-tooltip {
+    opacity: 1;
 }

@@ -18,94 +18,111 @@
             });
         }
     </script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/static/main.js"></script>
 </head>
 
 <body>
-    <h2><i class="fas fa-microchip"></i> OSC Servo Sender WebUI</h2>
     <form id="mainForm" onsubmit="event.preventDefault(); customSubmit();">
         <label>
+            <i class="fa-solid fa-user-gear"></i>
+            <span>Advanced mode</span>
+            <input id="chk-advanced" type="checkbox" checked="false">
+        </label>
+        <hr class="advanced-only">
+
+        <label  class="advanced-only">
             <i class="fas fa-bullseye"></i>
             <span>Targets</span>
             <span style="display: flex; align-items: center; gap: 1em;">
                 <label style="display: flex; align-items: center; margin: 0;">
-                    <input id="chk_boards" type="checkbox" data-param="SEND_CLIENTS" {% if SEND_CLIENTS %}checked{%
-                        endif %} onchange="updateParam(this)">
+                    <input id="chk_boards" type="checkbox" data-param="SEND_CLIENTS" {% if SEND_CLIENTS %}checked{% endif %} onchange="updateParam(this)">
                     <span style="min-width:4em;">boards</span>
                 </label>
             </span>
             <span style="display: flex; align-items: center; gap: 1em;">
                 <label style="display: flex; align-items: center; margin: 0;">
-                    <input id="chk_gh" type="checkbox" data-param="SEND_CLIENT_GH" {% if SEND_CLIENT_GH %}checked{%
-                        endif %} onchange="updateParam(this)">
+                    <input id="chk_gh" type="checkbox" data-param="SEND_CLIENT_GH" {% if SEND_CLIENT_GH %}checked{% endif %} onchange="updateParam(this)">
                     <span style="min-width:4em;">gh</span>
                 </label>
             </span>
         </label>
-        <label>
+
+
+        <label  class="advanced-only">
             <i class="fas fa-cogs"></i>
             <span>NUM_SERVOS</span>
-            <input name="NUM_SERVOS" value="{{NUM_SERVOS}}" {% if running %}readonly{% endif %}>
+            <input id="NUM_SERVOS" name="NUM_SERVOS" value="{{NUM_SERVOS}}" {% if running %}readonly{% endif %}>
         </label>
-        <label>
-            <i class="fas fa-tachometer-alt"></i>
+        <label class="advanced-only">
+            <i class="fas fa-film"></i>
             <span>RATE_fps</span>
-            <input name="RATE_fps" value="{{RATE_fps}}" {% if running %}readonly{% endif %}>
+            <input id="RATE_fps" name="RATE_fps" value="{{RATE_fps}}" {% if running %}readonly{% endif %}>
         </label>
-        <hr>
-        <label>
+        <hr class="advanced-only">
+        <label class="advanced-only">
             <i class="fas fa-arrows-alt-h"></i>
             <span>STROKE_OFFSET</span>
-            <input type="range" min="-100000" max="100000" step="100" value="{{ STROKE_OFFSET }}"
-                data-param="STROKE_OFFSET" data-endpoint="/set_stroke_offset" data-output="stroke_offset_out"
+            <input id="STROKE_OFFSET" type="range" min="0" max="100000" step="100" value="{{ STROKE_OFFSET }}"
+                data-param="STROKE_OFFSET" data-endpoint="/set_stroke_offset" data-output="STROKE_OFFSET_out"
                 oninput="updateParam(this)">
-            <output id="stroke_offset_out">{{ STROKE_OFFSET }}</output>
+            <output id="STROKE_OFFSET_out">{{ STROKE_OFFSET }}</output>
         </label>
-        <label>
+        <label class="advanced-only">
             <i class="fa-solid fa-road-barrier"></i>
             <span>LIMIT_ABSOLUTE</span>
-            <input type="range" min="0" max="200000" step="100" value="{{ LIMIT_ABSOLUTE }}" data-param="LIMIT_ABSOLUTE"
-                data-endpoint="/set_limit_absolute" data-output="limit_absolute_out" oninput="updateParam(this)">
-            <output id="limit_absolute_out">{{ LIMIT_ABSOLUTE }}</output>
+            <input id="LIMIT_ABSOLUTE" type="range" min="0" max="200000" step="100" value="{{ LIMIT_ABSOLUTE }}"
+                data-param="LIMIT_ABSOLUTE" data-endpoint="/set_limit_absolute" data-output="LIMIT_ABSOLUTE_out"
+                oninput="updateParam(this)">
+            <output id="LIMIT_ABSOLUTE_out">{{ LIMIT_ABSOLUTE }}</output>
         </label>
-        <label>
+        <label class="advanced-only">
             <i class="fa-solid fa-arrows-left-right"></i>
             <span>LIMIT_RELATIONAL</span>
-            <input type="range" min="0" max="200000" step="100" value="{{ LIMIT_RELATIONAL }}"
-                data-param="LIMIT_RELATIONAL" data-endpoint="/set_limit_relational" data-output="limit_relational_out"
+            <input id="LIMIT_RELATIONAL" type="range" min="0" max="200000" step="100" value="{{ LIMIT_RELATIONAL }}"
+                data-param="LIMIT_RELATIONAL" data-endpoint="/set_limit_relational" data-output="LIMIT_RELATIONAL_out"
                 oninput="updateParam(this)">
-            <output id="limit_relational_out">{{ LIMIT_RELATIONAL }}</output>
+            <output id="LIMIT_RELATIONAL_out">{{ LIMIT_RELATIONAL }}</output>
         </label>
-        <label>
+        <label class="advanced-only">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>LIMIT_SPEED</span>
+            <input id="LIMIT_SPEED" type="range" min="0" max="100000" step="1000" value="{{ LIMIT_SPEED }}"
+                data-param="LIMIT_SPEED" data-endpoint="/set_limit_speed" data-output="LIMIT_SPEED_out"
+                oninput="updateParam(this)">
+            <output id="LIMIT_SPEED_out">{{ LIMIT_SPEED }}</output>
+        </label>
+        <label class="advanced-only">
             <i class="fas fa-filter"></i>
             <span>LPF ALPHA</span>
-            <input type="range" min="0" max="1" step="0.01" value="{{ ALPHA }}" name="ALPHA" data-param="ALPHA"
-                data-endpoint="/set_alpha" data-output="alpha_out" oninput="updateParam(this)">
-            <output id="alpha_out">{{ ALPHA }}</output>
+            <input id="ALPHA" type="range" min="0" max="1" step="0.01" value="{{ ALPHA }}" name="ALPHA"
+                data-param="ALPHA" data-endpoint="/set_alpha" data-output="ALPHA_out" oninput="updateParam(this)">
+            <output id="ALPHA_out">{{ ALPHA }}</output>
         </label>
-        <hr>
-        <label>
+        <hr class="advanced-only">
+        <label class="advanced-only">
             <i class="fas fa-sliders-h"></i>
             <span>Kp</span>
-            <input type="range" min="0" max="0.5" step="0.01" value="{{ Kp }}" data-param="Kp" data-output="kp_out"
-                oninput="updateParam(this)">
-            <output id="kp_out">{{ Kp }}</output>
+            <input id="Kp" type="range" min="0" max="0.5" step="0.01" value="{{ Kp }}" data-param="Kp"
+                data-output="Kp_out" oninput="updateParam(this)">
+            <output id="Kp_out">{{ Kp }}</output>
         </label>
-        <label>
+        <label class="advanced-only">
             <i class="fas fa-sliders-h"></i>
             <span>Ki</span>
-            <input type="range" min="0" max="0.5" step="0.01" value="{{ Ki }}" data-param="Ki" data-output="ki_out"
-                oninput="updateParam(this)">
-            <output id="ki_out">{{ Ki }}</output>
+            <input id="Ki" type="range" min="0" max="0.5" step="0.01" value="{{ Ki }}" data-param="Ki"
+                data-output="Ki_out" oninput="updateParam(this)">
+            <output id="Ki_out">{{ Ki }}</output>
         </label>
-        <label>
+        <label class="advanced-only">
             <i class="fas fa-sliders-h"></i>
             <span>Kd</span>
-            <input type="range" min="0" max="0.5" step="0.01" value="{{ Kd }}" data-param="Kd" data-output="kd_out"
-                oninput="updateParam(this)">
-            <output id="kd_out">{{ Kd }}</output>
+            <input id="Kd" type="range" min="0" max="0.5" step="0.01" value="{{ Kd }}" data-param="Kd"
+                data-output="Kd_out" oninput="updateParam(this)">
+            <output id="Kd_out">{{ Kd }}</output>
         </label>
 
-        <button type="button" onclick="sendStep()" {% if running %}disabled{% endif %}>
+        <button type="button" class="advanced-only" onclick="sendStep()" {% if running %}disabled{% endif %}>
             <i class="fas fa-step-backward"></i><i class="fas fa-step-forward"></i> Step
         </button>
         <hr style="border-top: 3px double">
@@ -121,69 +138,119 @@
             </select>
         </label>
         <label>
+            <i class="fa-solid fa-stopwatch"></i>
+            <span>EASING_DURATION</span>
+            <input id="EASING_DURATION" type="range" min="0" max="5.0" step="0.01" value="{{ EASING_DURATION }}"
+                data-param="EASING_DURATION" data-output="EASING_DURATION_out" oninput="updateParam(this)">
+            <output id="EASING_DURATION_out">{{ EASING_DURATION }}</output>
+        </label>
+        <label>
             <i class="fas fa-wave-square"></i>
             <span>BASE_FREQ[Hz]</span>
-            <input type="range" min="0" max="2.0" step="0.01" value="{{ BASE_FREQ }}" data-param="BASE_FREQ"
-                data-output="base_freq_out" oninput="updateParam(this)">
-            <output id="base_freq_out">{{ BASE_FREQ }}</output>
+            <input id="BASE_FREQ" type="range" min="0" max="2.0" step="0.01" value="{{ BASE_FREQ }}"
+                data-param="BASE_FREQ" data-output="BASE_FREQ_out" oninput="updateParam(this)">
+            <output id="BASE_FREQ_out">{{ BASE_FREQ }}</output>
+        </label>
+        <label>
+            <i class="fa-solid fa-gauge-simple-high"></i>
+            <span>U_AVERAGE</span>
+            <input id="U_AVERAGE" type="range" min="0" max="2.0" step="0.01" value="{{ U_AVERAGE }}"
+                data-param="U_AVERAGE" data-output="U_AVERAGE_out" oninput="updateParam(this)">
+            <output id="U_AVERAGE_out">{{ U_AVERAGE }}</output>
+        </label>
+        <label>
+            <i class="fa-solid fa-gauge-high"></i>
+            <span>U_WIDTH</span>
+            <input id="U_WIDTH" type="range" min="0" max="2.0" step="0.01" value="{{ U_WIDTH }}" data-param="U_WIDTH"
+                data-output="U_WIDTH_out" oninput="updateParam(this)">
+            <output id="U_WIDTH_out">{{ U_WIDTH }}</output>
+        </label>
+        <label>
+            <i class="fa-solid fa-gauge-simple"></i>
+            <span>U_FREQUENTNESS</span>
+            <input id="U_FREQUENTNESS" type="range" min="0" max="2.0" step="0.01" value="{{ U_FREQUENTNESS }}"
+                data-param="U_FREQUENTNESS" data-output="U_FREQUENTNESS_out" oninput="updateParam(this)">
+            <output id="U_FREQUENTNESS_out">{{ U_FREQUENTNESS }}</output>
         </label>
         <label>
             <i class="fas fa-arrows-alt-v"></i>
             <span>DIRECTION</span>
-            <input type="range" min="-1" max="1" step="2" value="{{ DIRECTION }}" data-param="DIRECTION"
-                data-output="dir_out" oninput="updateParam(this)">
-            <output id="dir_out">{{ DIRECTION }}</output>
+            <input id="DIRECTION" type="range" min="-1" max="1" step="2" value="{{ DIRECTION }}" data-param="DIRECTION"
+                data-output="DIRECTION_out" oninput="updateParam(this)">
+            <output id="DIRECTION_out">{{ DIRECTION }}</output>
         </label>
+        <hr>
         <label>
             <i class="fas fa-sync-alt"></i>
             <span>PHASE_RATE</span>
-            <input type="range" min="0" max="8" step="0.1" value="{{ PHASE_RATE }}" data-param="PHASE_RATE"
-                data-endpoint="/set_phase_rate" data-output="phase_rate_out" oninput="updateParam(this)">
-            <output id="phase_rate_out">{{ PHASE_RATE }}</output>
+            <input id="PHASE_RATE" type="range" min="0" max="8" step="0.01" value="{{ PHASE_RATE }}"
+                data-param="PHASE_RATE" data-endpoint="/set_phase_rate" data-output="PHASE_RATE_out"
+                oninput="updateParam(this)">
+            <output id="PHASE_RATE_out">{{ PHASE_RATE }}</output>
         </label>
         <label>
             <i class="fas fa-a"></i>
             <span>PARAM_A</span>
-            <input type="range" min="0" max="1" step="0.01" value="{{ PARAM_A }}" data-param="PARAM_A"
-                data-endpoint="/set_param_a" data-output="param_a_out" oninput="updateParam(this)">
-            <output id="param_a_out">{{ PARAM_A }}</output>
+            <input id="PARAM_A" type="range" min="0" max="1" step="0.01" value="{{ PARAM_A }}" data-param="PARAM_A"
+                data-endpoint="/set_param_a" data-output="PARAM_A_out" oninput="updateParam(this)">
+            <output id="PARAM_A_out">{{ PARAM_A }}</output>
         </label>
         <label>
             <i class="fas fa-b"></i>
             <span>PARAM_B</span>
-            <input type="range" min="0" max="1" step="0.01" value="{{ PARAM_B }}" data-param="PARAM_B"
-                data-endpoint="/set_param_b" data-output="param_b_out" oninput="updateParam(this)">
-            <output id="param_b_out">{{ PARAM_B }}</output>
+            <input id="PARAM_B" type="range" min="0" max="1" step="0.01" value="{{ PARAM_B }}" data-param="PARAM_B"
+                data-endpoint="/set_param_b" data-output="PARAM_B_out" oninput="updateParam(this)">
+            <output id="PARAM_B_out">{{ PARAM_B }}</output>
         </label>
+        <hr>
         <label>
             <i class="fa-solid fa-ruler-horizontal"></i>
             <span>STROKE_LENGTH</span>
-            <input type="range" min="1000" max="100000" step="1000" value="{{ STROKE_LENGTH }}"
-                data-param="STROKE_LENGTH" data-endpoint="/set_stroke_length" data-output="stroke_length_out"
+            <input id="STROKE_LENGTH" type="range" min="0" max="50000" step="100" value="{{ STROKE_LENGTH }}"
+                data-param="STROKE_LENGTH" data-endpoint="/set_stroke_length" data-output="STROKE_LENGTH_out"
                 oninput="updateParam(this)">
-            <output id="stroke_length_out">{{ STROKE_LENGTH }}</output>
+            <output id="STROKE_LENGTH_out">{{ STROKE_LENGTH }}</output>
         </label>
         <label>
             <i class="fas fa-water"></i>
             <span>AMP_FREQ[Hz]</span>
-            <input type="range" min="-2" max="2.0" step="0.01" value="{{ AMP_FREQ }}" data-param="AMP_FREQ"
-                data-output="amp_freq_out" oninput="updateParam(this)">
-            <output id="amp_freq_out">{{ AMP_FREQ }}</output>
+            <input id="AMP_FREQ" type="range" min="-2" max="2.0" step="0.01" value="{{ AMP_FREQ }}"
+                data-param="AMP_FREQ" data-output="AMP_FREQ_out" oninput="updateParam(this)">
+            <output id="AMP_FREQ_out">{{ AMP_FREQ }}</output>
         </label>
         <label>
             <i class="fas fa-a"></i>
             <span>AMP_PARAM_A</span>
-            <input type="range" min="0" max="1" step="0.01" value="{{ AMP_PARAM_A }}" data-param="AMP_PARAM_A"
-                data-endpoint="/set_amp_param_a" data-output="amp_param_a_out" oninput="updateParam(this)">
-            <output id="amp_param_a_out">{{ AMP_PARAM_A }}</output>
+            <input id="AMP_PARAM_A" type="range" min="0" max="1" step="0.01" value="{{ AMP_PARAM_A }}"
+                data-param="AMP_PARAM_A" data-endpoint="/set_amp_param_a" data-output="AMP_PARAM_A_out"
+                oninput="updateParam(this)">
+            <output id="AMP_PARAM_A_out">{{ AMP_PARAM_A }}</output>
         </label>
         <label>
             <i class="fas fa-b"></i>
             <span>AMP_PARAM_B</span>
-            <input type="range" min="0" max="1" step="0.01" value="{{ AMP_PARAM_B }}" data-param="AMP_PARAM_B"
-                data-endpoint="/set_amp_param_b" data-output="amp_param_b_out" oninput="updateParam(this)">
-            <output id="amp_param_b_out">{{ AMP_PARAM_B }}</output>
+            <input id="AMP_PARAM_B" type="range" min="0" max="1" step="0.01" value="{{ AMP_PARAM_B }}"
+                data-param="AMP_PARAM_B" data-endpoint="/set_amp_param_b" data-output="AMP_PARAM_B_out"
+                oninput="updateParam(this)">
+            <output id="AMP_PARAM_B_out">{{ AMP_PARAM_B }}</output>
         </label>
+        <label>
+            <i class="fa-solid fa-compass"></i>
+            <span>LOCATION_DEGREE</span>
+            <input id="LOCATION_DEGREE" type="range" min="0" max="1" step="0.01" value="{{ LOCATION_DEGREE }}"
+                data-param="LOCATION_DEGREE" data-endpoint="/set_LOCATION_DEGREE" data-output="LOCATION_DEGREE_out"
+                oninput="updateParam(this)">
+            <output id="LOCATION_DEGREE_out">{{ LOCATION_DEGREE }}</output>
+        </label>
+        <label>
+            <i class="fa-solid fa-mountain-sun"></i>
+            <span>LOCATION_HEIGHT</span>
+            <input id="LOCATION_HEIGHT" type="range" min="0" max="1" step="0.01" value="{{ LOCATION_HEIGHT }}"
+                data-param="LOCATION_HEIGHT" data-endpoint="/set_LOCATION_HEIGHT" data-output="LOCATION_HEIGHT_out"
+                oninput="updateParam(this)">
+            <output id="LOCATION_HEIGHT_out">{{ LOCATION_HEIGHT }}</output>
+        </label>
+
 
         <button type="button" onclick="customSubmit()">
             {% if running %}
@@ -194,28 +261,36 @@
         </button>
         {% if running %}
         <i class="fas fa-spinner fa-spin"></i>sending OSC...
-        {% else %}
+        {% endif %}
+        <span id="form-loading" style="display:none; color:#2a7;">
+            <i class="fa-solid fa-spinner fa-spin"></i> configuring...
+        </span>
         <hr style="border-top: 3px double">
-        <button type="button" onclick="sendSetNeutral()">
+        <button type="button" onclick="sendSetNeutral()" {% if running %}disabled{% endif %}>
             <i class="fas fa-undo"></i> Neutral
         </button>
-        <button type="button" onclick="sendHomeAll()">
+        <button type="button" onclick="sendHomeAll()" {% if running %}disabled{% endif %}>
             <i class="fas fa-home"></i> Home All
         </button>
-        <button type="button" id="init-button" onclick="sendInit()">
+        <button type="button" id="init-button" onclick="sendInit()" {% if running %}disabled{% endif %}>
             <i class="fas fa-power-off"></i> Init
         </button>
         <button type="button" onclick="sendRelease()" {% if running %}disabled{% endif %}>
             <i class="fas fa-unlock"></i> Release
         </button>
 
-        {% endif %}
-        <span id="form-loading" style="display:none; color:#2a7;">
-            <i class="fa-solid fa-spinner fa-spin"></i> configuring...
-        </span>
     </form>
     <br>
-    <form id="independentControllerForm">
+    <!-- Servo Position Visualization -->
+    <div id="servo-visualizer">
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <span id="servo-first-label" style="font-size: 0.8em; color: #666; min-width: 20px; text-align: right;">#1</span>
+            <div id="servo-bars-container" style="flex: 1;"></div>
+            <span id="servo-last-label" style="font-size: 0.8em; color: #666; min-width: 30px; text-align: left;">#31</span>
+        </div>
+    </div>
+    <br>
+    <form id="independentControllerForm" class="advanced-only">
         <div style="margin-bottom:1em;">
             <label>
                 <i class="fas fa-dot-circle"></i>
@@ -245,7 +320,6 @@
         title="Emergency Stop (also stops by ESC key)">
         <i class="fa-solid fa-ban"></i>
     </button>
-    <script src="/static/main.js"></script>
 </body>
 
 </html>

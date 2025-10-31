@@ -1,7 +1,21 @@
+const socket = io();
+
 function formatOutputWithCommas(outputElement) {
     const value = parseFloat(outputElement.textContent);
     if (!isNaN(value)) {
         outputElement.textContent = value.toLocaleString();
+
+        const relatedInputId = outputElement.id.replace('_out', '');
+        const relatedInput = document.getElementById(relatedInputId);
+        if (relatedInput) {
+            const min = parseFloat(relatedInput.min);
+            const max = parseFloat(relatedInput.max);
+            if (!isNaN(min) && !isNaN(max) && (value < min || value > max)) {
+                outputElement.style.color = 'red';
+            } else {
+                outputElement.style.color = '';
+            }
+        }
     }
 }
 
@@ -34,7 +48,30 @@ function customSubmit() {
 function setFormEnabled(enabled) {
     ["mainForm", "independentControllerForm"].forEach(formId => {
         const form = document.getElementById(formId);
-        if (form) Array.from(form.elements).forEach(el => { el.disabled = !enabled; });
+        if (form) {
+            Array.from(form.elements).forEach(el => {
+                // Skip control buttons (Neutral, Home All, Init, Release)
+                if (el.id === 'init-button' || 
+                    el.onclick && (
+                        el.onclick.toString().includes('sendSetNeutral') ||
+                        el.onclick.toString().includes('sendHomeAll') ||
+                        el.onclick.toString().includes('sendRelease')
+                    )) {
+                    return; // Skip these buttons, they are controlled by {% if running %}
+                }
+                
+                if (el.dataset.param === "STROKE_OFFSET") {
+                    el.disabled = true;
+                } else {
+                    el.disabled = !enabled;
+                    if (el.type === "output") {
+                        const relatedInputId = el.id.replace('_out', '');
+                        const relatedInput = document.getElementById(relatedInputId);
+                        if (relatedInput && (el.value == "" || isNaN(el.value))) relatedInput.disabled = true;
+                    }
+                }
+            });
+        }
     });
     const loader = document.getElementById('form-loading');
     if (loader) loader.style.display = enabled ? 'none' : 'inline-block';
@@ -220,7 +257,125 @@ function sendHalt() {
         });
 }
 
-// Format all outputs with commas on page load
+function applyAdvancedVisibility(enabled) {
+    document.querySelectorAll('.advanced-only').forEach(el => {
+        el.style.display = enabled ? '' : 'none';
+    });
+}
+
+function initServoVisualization(numServos) {
+    const container = document.getElementById('servo-bars-container');
+    if (!container) return;
+    
+    // Update the last label
+    const lastLabel = document.getElementById('servo-last-label');
+    if (lastLabel) {
+        lastLabel.textContent = `#${numServos}`;
+    }
+    
+    container.innerHTML = '';
+    for (let i = 0; i < numServos; i++) {
+        const barWrapper = document.createElement('div');
+        barWrapper.className = 'servo-bar-wrapper';
+        barWrapper.dataset.servoId = i + 1;
+        
+        const bar = document.createElement('div');
+        bar.className = 'servo-bar';
+        
+        const tooltip = document.createElement('div');
+        tooltip.className = 'servo-bar-tooltip';
+        tooltip.textContent = `#${i + 1}: 0`;
+        
+        barWrapper.appendChild(bar);
+        barWrapper.appendChild(tooltip);
+        container.appendChild(barWrapper);
+    }
+}
+
+function updateServoVisualization(positions, offset) {
+    const container = document.getElementById('servo-bars-container');
+    if (!container) return;
+    
+    const wrappers = container.querySelectorAll('.servo-bar-wrapper');
+    if (wrappers.length === 0) return;
+    
+    // Fixed maximum value for scaling: ±40000
+    const MAX_VALUE =40000;
+    
+    positions.forEach((pos, index) => {
+        if (index >= wrappers.length) return;
+        
+        const wrapper = wrappers[index];
+        const bar = wrapper.querySelector('.servo-bar');
+        const tooltip = wrapper.querySelector('.servo-bar-tooltip');
+        
+        // Calculate height as percentage (0-100% of half container, clamped to max)
+        const heightPercent = Math.min((Math.abs(pos) / MAX_VALUE) * 100, 100);
+        
+        // Remove both classes first to reset state
+        bar.classList.remove('positive', 'negative');
+        
+        // Apply height and direction based on sign
+        bar.style.height = `${heightPercent}%`;
+        
+        if (pos >= 0) {
+            // Positive: blue bar growing upward from center
+            bar.classList.add('positive');
+        } else {
+            // Negative: red bar growing downward from center
+            bar.classList.add('negative');
+        }
+        
+        // Update tooltip
+        if (tooltip) {
+            tooltip.textContent = `#${index + 1}: ${pos.toLocaleString()}`;
+        }
+    });
+}
+
+socket.on('param_update', function (data) {
+    const { key, value } = data;
+    console.log(`Param updated: ${key} = ${value}`);
+
+    const outputElement = document.querySelector(`[data-param="${key}"]`);
+    const displayElement = document.getElementById(`${key}_out`);
+    if (outputElement) {
+        outputElement.value = value;
+        outputElement.classList.add('updated');
+        setTimeout(() => outputElement.classList.remove('updated'), 100);
+    }
+    if (displayElement) {
+        displayElement.textContent = value;
+        formatOutputWithCommas(displayElement);
+        displayElement.classList.add('updated');
+        setTimeout(() => displayElement.classList.remove('updated'), 100);
+    }
+});
+
+socket.on('servo_positions', function (data) {
+    updateServoVisualization(data.positions, data.offset);
+});
+
+// Handle server reconnection - reload page when server restarts
+socket.on('connect', function() {
+    console.log('Connected to server');
+    
+    // Check if this is a reconnection (not initial page load)
+    const wasConnected = sessionStorage.getItem('wasConnected');
+    if (wasConnected === 'true') {
+        console.log('Server reconnected - reloading page');
+        sessionStorage.removeItem('wasConnected');
+        window.location.reload();
+    } else {
+        // Mark as connected for future reconnection detection
+        sessionStorage.setItem('wasConnected', 'true');
+    }
+});
+
+socket.on('disconnect', function() {
+    console.log('Disconnected from server');
+});
+
 window.addEventListener('DOMContentLoaded', function () {
 
     window.addEventListener('keydown', function (event) {
@@ -232,5 +387,27 @@ window.addEventListener('DOMContentLoaded', function () {
     const motorIdInput = document.getElementById('motor-id-input');
     if (motorIdInput) motorIdInput.addEventListener('change', getTargetPosition);
 
+    const advChk = document.getElementById('chk-advanced');
+    const saved = localStorage.getItem('advancedMode');
+    const advancedOn = saved ? saved === '1' : false;
+    if (advChk) {
+        advChk.checked = advancedOn;
+        applyAdvancedVisibility(advChk.checked);
+        advChk.addEventListener('change', (e) => {
+            const on = e.target.checked;
+            localStorage.setItem('advancedMode', on ? '1' : '0');
+            applyAdvancedVisibility(on);
+        });
+    } else {
+        applyAdvancedVisibility(false);
+    }
+
+    setFormEnabled(true);
+
     document.querySelectorAll('output').forEach(formatOutputWithCommas);
+    
+    // Initialize servo visualization
+    const numServosInput = document.getElementById('NUM_SERVOS');
+    const numServos = numServosInput ? parseInt(numServosInput.value) : 31;
+    initServoVisualization(numServos);
 });

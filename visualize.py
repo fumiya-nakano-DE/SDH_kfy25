@@ -4,7 +4,7 @@ import time
 import os
 import importlib
 from mpl_toolkits.mplot3d import Axes3D  # 3Dプロット用
-from osc_params import params, NUM_SERVOS
+from osc_params import get_params_full, NUM_SERVOS
 import osc_modes
 
 plt.style.use("dark_background")
@@ -33,12 +33,14 @@ def plot_make_frame(fig=None, ax=None):
     all_vals = []
     times = np.linspace(0, duration, num_frames)
     for t in times:
-        vals = osc_modes.make_frame(t, num_servos, params)
+        vals = osc_modes.make_frame(t, num_servos) - get_params_full().get(
+            "STROKE_OFFSET", 0
+        )
         all_vals.append(vals)
     all_vals = np.array(all_vals)  # shape: (num_frames, num_servos)
 
-    mode_id = str(params.get("MODE", "1"))
-    mode_info = params["MODES"][mode_id]
+    mode_id = str(get_params_full().get("MODE", "1"))
+    mode_info = get_params_full()["MODES"][mode_id]
     mode_name = mode_info.get("NAME", f"Mode {mode_id}")
     main_params = f"BASE_FREQ={mode_info.get('BASE_FREQ')}, PHASE_RATE={mode_info.get('PHASE_RATE')}, STROKE_LENGTH={mode_info.get('STROKE_LENGTH')}"
 
@@ -111,7 +113,9 @@ def watch_and_replot():
     ax = fig.add_subplot(111, projection="3d")
     plot_make_frame(fig, ax)
 
-    print("Watching for changes in params.json or osc_modes.py. Press Ctrl+C to exit.")
+    print(
+        "Watching for changes in get_params_full().json or osc_modes.py. Press Ctrl+C to exit."
+    )
     while True:
         try:
             plt.pause(0.1)  # Allow GUI events
@@ -121,10 +125,12 @@ def watch_and_replot():
             updated = False
             if new_params_mtime != last_params_mtime:
                 importlib.reload(osc_params)
-                globals()["params"] = osc_params.params
+                globals()["params"] = get_params_full()
                 last_params_mtime = new_params_mtime
                 updated = True
-                print("Detected params.json change, reloading and replotting...")
+                print(
+                    "Detected get_params_full().json change, reloading and replotting..."
+                )
             if new_modes_mtime != last_modes_mtime:
                 importlib.reload(osc_modes)
                 last_modes_mtime = new_modes_mtime
