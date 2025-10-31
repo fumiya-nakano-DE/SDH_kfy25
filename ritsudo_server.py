@@ -312,17 +312,22 @@ def homing_endpoint():
         return jsonify(result="NG", error="Invalid or missing motorID"), 400
 
     status = homing(motor_id)
+    
 
     if status is None:
+        osc_speaker.send_message("/Homed", motor_id, -1)
         return jsonify(result="NG", error="No status received"), 504
 
     if int(status) == 3:
+        osc_speaker.send_message("/Homed", motor_id, 1)
         return jsonify(result="OK", motorID=motor_id, homing_status=int(status))
 
     elif int(status) == -1:
+        osc_speaker.send_message("/Homed", motor_id, -1)
         return jsonify(result="NG", error="motorID out of range"), 400
 
     elif int(status) == 4:
+        osc_speaker.send_message("/Homed", motor_id, -1)
         return (
             jsonify(
                 result="NG",
@@ -741,7 +746,7 @@ def main():
         start_osc_receiver_thread()
 
         web_host = os.getenv("WEB_HOST", "0.0.0.0")
-        web_port = int(os.getenv("WEB_PORT", "5000"))
+        web_port = int(os.getenv("WEB_PORT", "5001"))
 
         lan_ip = None
         try:
