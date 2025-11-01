@@ -290,7 +290,7 @@ def homing(motor_id):
         return -1
     logger.debug(f"Starting homing for motor {motor_id}")
     enable_servo(client, enable=False, local_id=local_id, broadcast=False)
-    client.send_message("/setKval", [local_id, 10, 25, 25, 25])
+    client.send_message("/setKval", [local_id, 35, 60, 60, 60, 60])
     time.sleep(0.05)
     reset_latest_homing_status(motor_id)
     client.send_message("/homing", [local_id])

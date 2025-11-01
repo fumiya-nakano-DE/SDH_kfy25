@@ -35,8 +35,8 @@ _params = {
     "STROKE_OFFSET": 0,
     "SEND_CLIENTS": True,
     "SEND_CLIENT_GH": False,
-    "KVal_normal": 18,
-    "KVal_hold": 8,
+    "KVal_normal": 54,
+    "KVal_hold": 35,
 }
 
 

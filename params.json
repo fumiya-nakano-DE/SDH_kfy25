@@ -341,9 +341,11 @@
   "Kp": 0.06,
   "Ki": 0.0,
   "Kd": 0.01,
-  "STROKE_OFFSET": 50000,
+  "STROKE_OFFSET": 62000,
   "SEND_CLIENTS": true,
   "SEND_CLIENT_GH": true,
+  "KVal_normal": 54,
+  "KVal_hold": 35,
   "LIMIT_ABSOLUTE": 120600,
   "LIMIT_RELATIONAL": 123900,
   "LIMIT_SPEED": 80000
