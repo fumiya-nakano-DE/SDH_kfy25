@@ -1,5 +1,5 @@
 {
-  "MODE": 102,
+  "MODE": "301",
   "MODES": {
     "101": {
       "NAME": "Simple sin",
@@ -148,15 +148,16 @@
     },
     "301": {
       "NAME": "Soliton wave",
-      "EASING_DURATION": 1.0,
+      "EASING_DURATION": 0.0,
       "BASE_FREQ": 0.2,
-      "U_AVERAGE": 1.0,
+      "U_AVERAGE": 0.5,
       "U_WIDTH": 0,
       "U_FREQUENTNESS": 0.0,
-      "DIRECTION": 1,
-      "PARAM_A": 0.1,
-      "PARAM_B": 0.5,
-      "STROKE_LENGTH": 27000,
+      "DIRECTION": -1,
+      "PHASE_RATE": 0.45,
+      "PARAM_A": 0.11,
+      "PARAM_B": 0.27,
+      "STROKE_LENGTH": 11200,
       "FUNC": "soliton"
     },
     "401": {

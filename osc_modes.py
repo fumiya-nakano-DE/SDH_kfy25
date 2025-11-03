@@ -216,6 +216,8 @@ def azimuth_variable(t, num_servos):
 
 def soliton(t, num_servos):
     period = cycle_from_params()
+    phase_shift = float(get_params_mode().get("PHASE_RATE", 0.0))
+    t = (t + phase_shift * period) % period
     width = max(float(get_params_mode().get("PARAM_A", 0.15)), 1e-6)  # 0..1 of cycle
     speed = float(get_params_mode().get("PARAM_B", 1.0))  # 伝播速度スケール
     vals = []
