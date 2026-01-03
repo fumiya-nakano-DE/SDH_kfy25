@@ -141,6 +141,44 @@ OSCで`"MODE"`パラメータを含むメッセージを送信した際は、以
 - `Home_all()`が実行中に再度呼び出された場合、前の処理を停止してから新しい処理を開始するようにしました
 - `Init()`実行時すなわち`/Init`または`/Release`命令があった際に`Home_all()`が動いている場合は、プロセスがkillされるようになりました
 
+### LUT(2026.01.03)
+
+伸縮量を調整するLUTを実装しました
+![LUT](readme/LUT.png)
+
+```mermaid
+graph TD
+  subgraph a["osc_sender"]
+    A
+    h
+    I
+  end
+  subgraph b["osc_modes"]
+    B
+    C
+    D
+    E
+    F
+    G
+  end
+  A["osc_sender()"] --> B
+  B["make_frame()"] --> D
+  B --> C
+  C["FUNC() => raw"]
+  D["amplitude_modulation() => amp"]
+  C --> E[" raw * amp"]
+  D --> E
+  E --> F["***LUT()*** => vals"]
+  F --> G["vals * STROKE_LENGTH
+  + STROKE_OFFSET"]
+  G --> LPF
+  subgraph h["filter_vals()"]
+    LPF --> limitter["limitter (ABS,SPD,REL)"]
+  end
+  limitter --> I["send_all_setTargetPositionList(vals)"]
+  I --> STEP800
+```
+
 ## トラブルシューティング
 
 ### 実機が動かない
