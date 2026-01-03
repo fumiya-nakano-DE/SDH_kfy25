@@ -45,15 +45,7 @@ def amp_sin(t, num_servos):
 
 def amplitude_modulation(t, num_servos):
     amp_func = globals().get(str(get_params_mode().get("AMP_MODE")), solid)
-    stroke_length = float(get_params_mode().get("STROKE_LENGTH", 20000))
-    stroke_length_limit = float(
-        get_params_mode().get(
-            "STROKE_LENGTH_LIMIT_SPECIFIC",
-            get_params_full().get("STROKE_LENGTH_LIMIT", STROKE_LENGTH_LIMIT_HARDCODED),
-        )
-    )
-    stroke_length = max(min(stroke_length, stroke_length_limit), 0)
-    return amp_func(t, num_servos) * stroke_length
+    return amp_func(t, num_servos)
 
 
 def amp_gaussian_window(t, num_servos):
@@ -188,7 +180,6 @@ def sin(t, num_servos):
     return np.array(vals, dtype=float)
 
 
-
 def azimuth(t, num_servos):
     def azimuth_core(i, num_servos, t, rate):
         return math.sin(
@@ -201,18 +192,20 @@ def azimuth(t, num_servos):
     vals = [azimuth_core(i, num_servos, t_mod, rate) for i in range(num_servos)]
     return np.array(vals, dtype=float)
 
+
 def azimuth_variable(t, num_servos):
     def azimuth_core(i, num_servos, t, rate):
         f = float(get_params_mode().get("PARAM_B", 0.0))
         return math.sin(
             2 * math.pi * rate * t + azimuth_phase_variable(i, f) + phase(i, num_servos)
         )
-        
+
     cycle = cycle_from_params()
     t_mod = t % cycle
     rate = base_freq()
     vals = [azimuth_core(i, num_servos, t_mod, rate) for i in range(num_servos)]
     return np.array(vals, dtype=float)
+
 
 def soliton(t, num_servos):
     period = cycle_from_params()
@@ -303,6 +296,93 @@ def random_sin_freq(t, num_servos):
 
 
 # -------------------------
+# Tone-curve spline LUT
+# -------------------------
+LUT_X = np.linspace(-1.0, 1.0, 7)
+
+
+def LUT(vals):
+    """Apply tone-curve LUT using a shape-preserving cubic Hermite spline.
+
+    Compared to Catmull-Rom, this reduces wiggles/overshoot near the
+    endpoints while staying smooth through the 7 control points.
+    """
+
+    n = len(LUT_X)
+    if n < 2:
+        return vals
+
+    params_full = get_params_full()
+    lut_y_list = []
+    for i in range(n):
+        key = f"LUT_Y{i}"
+        if key in params_full:
+            lut_y_list.append(float(params_full[key]))
+        else:
+            lut_y_list.append(float(LUT_X[i]))
+
+    lut_y = np.array(lut_y_list, dtype=float)
+
+    # Pre-compute segment widths and secant slopes
+    h = np.diff(LUT_X)
+    if np.any(h == 0):
+        return vals
+    delta = np.diff(lut_y) / h
+
+    # Shape-preserving slope estimates (monotone cubic style)
+    m = np.empty(n, dtype=float)
+    m[0] = delta[0]
+    m[-1] = delta[-1]
+    for k in range(1, n - 1):
+        if delta[k - 1] * delta[k] <= 0:
+            m[k] = 0.0
+        else:
+            m[k] = 0.5 * (delta[k - 1] + delta[k])
+
+    x_min = LUT_X[0]
+    x_max = LUT_X[-1]
+
+    for i in range(len(vals)):
+        u = float(vals[i])
+
+        # Choose segment index k so LUT_X[k] <= u <= LUT_X[k+1],
+        # with clamped extrapolation outside [-1, 1].
+        if u <= x_min:
+            k = 0
+        elif u >= x_max:
+            k = n - 2
+        else:
+            # Uniform grid, so we can locate k by index.
+            step = (x_max - x_min) / (n - 1)
+            s = (u - x_min) / step
+            k = int(math.floor(s))
+            k = max(0, min(n - 2, k))
+
+        x_k = LUT_X[k]
+        h_k = h[k]
+        if h_k == 0:
+            continue
+        t = (u - x_k) / h_k
+
+        t2 = t * t
+        t3 = t2 * t
+
+        h00 = 2 * t3 - 3 * t2 + 1
+        h10 = t3 - 2 * t2 + t
+        h01 = -2 * t3 + 3 * t2
+        h11 = t3 - t2
+
+        y_k = lut_y[k]
+        y_k1 = lut_y[k + 1]
+        m_k = m[k]
+        m_k1 = m[k + 1]
+
+        vals[i] = h00 * y_k + h10 * h_k * m_k + h01 * y_k1 + h11 * h_k * m_k1
+
+    return vals
+
+
+# -------------------------
 # Frame builder
 # -------------------------
 def make_frame(t, num_servos):
@@ -314,4 +394,17 @@ def make_frame(t, num_servos):
 
     raw = func(t * direction, num_servos)
     amp = amplitude_modulation(t, num_servos)
-    return raw * amp + offset
+
+    norm_vals = np.array(raw) * np.array(amp)
+    norm_vals = LUT(norm_vals)
+
+    stroke_length = float(get_params_mode().get("STROKE_LENGTH", 20000))
+    stroke_length_limit = float(
+        get_params_mode().get(
+            "STROKE_LENGTH_LIMIT_SPECIFIC",
+            get_params_full().get("STROKE_LENGTH_LIMIT", STROKE_LENGTH_LIMIT_HARDCODED),
+        )
+    )
+    stroke_length = max(min(stroke_length, stroke_length_limit), 0)
+
+    return norm_vals * stroke_length + offset

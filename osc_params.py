@@ -358,6 +358,13 @@ DEFAULT_PARAMS = {
     "LIMIT_ABSOLUTE": 120600,
     "LIMIT_RELATIONAL": 123900,
     "LIMIT_SPEED": 80000,
+    "LUT_Y0": -1.0,
+    "LUT_Y1": -2.0 / 3.0,
+    "LUT_Y2": -1.0 / 3.0,
+    "LUT_Y3": 0.0,
+    "LUT_Y4": 1.0 / 3.0,
+    "LUT_Y5": 2.0 / 3.0,
+    "LUT_Y6": 1.0,
 }
 
 _params = DEFAULT_PARAMS.copy()

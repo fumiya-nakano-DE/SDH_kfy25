@@ -224,7 +224,10 @@ def index():
             running = start()
         else:
             stop()
-    return render_template("index.html", **render_params, running=running)
+    # Pass both individual keys (via **render_params) and the full dict as render_params
+    return render_template(
+        "index.html", render_params=render_params, **render_params, running=running
+    )
 
 
 @app.route("/stop", methods=["POST"])
@@ -252,7 +255,9 @@ def setNeutral():
     params_full = get_params_full()
     target_vals = [params_full.get("STROKE_OFFSET", 50000)] * params_full["NUM_SERVOS"]
     interval = 0.05
-    step_per_second = params_full.get("NEUTRAL_SPEED", 20000) # Adjust for neutraling speed
+    step_per_second = params_full.get(
+        "NEUTRAL_SPEED", 20000
+    )  # Adjust for neutraling speed
     step_per_cycle = step_per_second * interval
     stop()
     current_vals = get_prev_vals() or target_vals
@@ -299,7 +304,9 @@ def homing(motor_id):
     )
     Kval_normal = int(params_full.get("KVal_normal", 18))
     Kval_hold = int(params_full.get("KVal_hold", 8))
-    client.send_message("/setKval", [local_id, Kval_hold, Kval_normal, Kval_normal, Kval_normal])
+    client.send_message(
+        "/setKval", [local_id, Kval_hold, Kval_normal, Kval_normal, Kval_normal]
+    )
     time.sleep(0.05)
     enable_servo(client, enable=True, local_id=local_id, broadcast=False)
     time.sleep(0.05)
@@ -330,7 +337,6 @@ def homing_endpoint():
         return jsonify(result="NG", error="Invalid or missing motorID"), 400
 
     status = homing(motor_id)
-    
 
     if status is None:
         osc_speaker.send_message("/Homed", motor_id, -1)
@@ -463,23 +469,23 @@ def _home_all_wrapper():
 @app.route("/home_all", methods=["POST", "GET"])
 def home_all_endpoint():
     global home_all_thread, home_all_stop, home_all_result
-    
+
     # Clear the stop event and result before starting
     home_all_stop.clear()
     home_all_result = None
-    
+
     # Start home_all in a separate thread
     home_all_thread = Thread(target=_home_all_wrapper, daemon=True)
     home_all_thread.start()
-    
+
     # Wait for completion (with timeout to handle edge cases)
     home_all_thread.join(timeout=350)  # 5 minutes max
-    
+
     # Return the result
     result = home_all_result
     if result is None:
         result = {"result": "TIMEOUT", "error": "home_all execution timeout"}
-    
+
     if isinstance(result, tuple):
         body, code = result
         return jsonify(body), code
@@ -535,14 +541,14 @@ def set_PID():
 
 def init(enable=True):
     global home_all_stop, home_all_thread
-    
+
     # Stop any running home_all process
     if home_all_thread is not None and home_all_thread.is_alive():
         logger.info("Stopping running home_all process...")
         home_all_stop.set()
         home_all_thread.join(timeout=2)
         logger.info("home_all process stopped")
-    
+
     clients = get_clients()
     booted_ports = set()
 
@@ -730,7 +736,7 @@ def handle_disconnect():
 
 def listener_message_callback(address, *args):
     global home_all_thread, home_all_stop, home_all_result
-    
+
     params_full = get_params_full()
     params_mode = get_params_mode()
 

@@ -51,7 +51,7 @@ label input[type="number"],
 label select {
     flex: 1 1 200px;
     margin: 0 0.5em;
-    max-width: 100%; 
+    max-width: 100%;
     min-width: 0;
 }
 
@@ -70,6 +70,25 @@ label output {
     min-width: 4em;
     text-align: right;
     margin-left: 0.5em;
+}
+
+/* LUT tone-curve UI */
+.lut-y-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4em;
+}
+
+.lut-y-sliders {
+    display: none;
+}
+
+#lut-curve-canvas {
+    flex: 0 0 auto;
+    width: 320px;
+    height: 320px;
+    max-width: 320px;
 }
 
 hr {
@@ -211,11 +230,11 @@ button {
     z-index: 100;
 }
 
-.servo-bar.positive ~ .servo-bar-tooltip {
+.servo-bar.positive~.servo-bar-tooltip {
     top: -25px;
 }
 
-.servo-bar.negative ~ .servo-bar-tooltip {
+.servo-bar.negative~.servo-bar-tooltip {
     bottom: -25px;
 }
 

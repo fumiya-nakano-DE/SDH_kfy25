@@ -31,25 +31,27 @@
         </label>
         <hr class="advanced-only">
 
-        <label  class="advanced-only">
+        <label class="advanced-only">
             <i class="fas fa-bullseye"></i>
             <span>Targets</span>
             <span style="display: flex; align-items: center; gap: 1em;">
                 <label style="display: flex; align-items: center; margin: 0;">
-                    <input id="chk_boards" type="checkbox" data-param="SEND_CLIENTS" {% if SEND_CLIENTS %}checked{% endif %} onchange="updateParam(this)">
+                    <input id="chk_boards" type="checkbox" data-param="SEND_CLIENTS" {% if SEND_CLIENTS %}checked{%
+                        endif %} onchange="updateParam(this)">
                     <span style="min-width:4em;">boards</span>
                 </label>
             </span>
             <span style="display: flex; align-items: center; gap: 1em;">
                 <label style="display: flex; align-items: center; margin: 0;">
-                    <input id="chk_gh" type="checkbox" data-param="SEND_CLIENT_GH" {% if SEND_CLIENT_GH %}checked{% endif %} onchange="updateParam(this)">
+                    <input id="chk_gh" type="checkbox" data-param="SEND_CLIENT_GH" {% if SEND_CLIENT_GH %}checked{%
+                        endif %} onchange="updateParam(this)">
                     <span style="min-width:4em;">gh</span>
                 </label>
             </span>
         </label>
 
 
-        <label  class="advanced-only">
+        <label class="advanced-only">
             <i class="fas fa-cogs"></i>
             <span>NUM_SERVOS</span>
             <input id="NUM_SERVOS" name="NUM_SERVOS" value="{{NUM_SERVOS}}" {% if running %}readonly{% endif %}>
@@ -98,6 +100,22 @@
             <input id="ALPHA" type="range" min="0" max="1" step="0.01" value="{{ ALPHA }}" name="ALPHA"
                 data-param="ALPHA" data-endpoint="/set_alpha" data-output="ALPHA_out" oninput="updateParam(this)">
             <output id="ALPHA_out">{{ ALPHA }}</output>
+        </label>
+        <label class="advanced-only">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>LUT</span>
+            <div class="lut-y-wrapper">
+                <canvas id="lut-curve-canvas" width="320" height="320"
+                    style="background:#f5f5f7; border:1px solid #ccccd5; border-radius:4px;"></canvas>
+                <div class="lut-y-sliders">
+                    {% for i in range(7) %}
+                    {% set key = 'LUT_Y' ~ i %}
+                    {% set val = render_params[key] if key in render_params else (-1.0 + i * (2.0/6.0)) %}
+                    <input id="LUT_Y{{ i }}" type="range" min="-3" max="3" step="0.01" value="{{ val }}"
+                        data-param="LUT_Y{{ i }}" oninput="updateParam(this)">
+                    {% endfor %}
+                </div>
+            </div>
         </label>
         <hr class="advanced-only">
         <label class="advanced-only">
@@ -284,9 +302,11 @@
     <!-- Servo Position Visualization -->
     <div id="servo-visualizer">
         <div style="display: flex; align-items: center; gap: 5px;">
-            <span id="servo-first-label" style="font-size: 0.8em; color: #666; min-width: 20px; text-align: right;">#1</span>
+            <span id="servo-first-label"
+                style="font-size: 0.8em; color: #666; min-width: 20px; text-align: right;">#1</span>
             <div id="servo-bars-container" style="flex: 1;"></div>
-            <span id="servo-last-label" style="font-size: 0.8em; color: #666; min-width: 30px; text-align: left;">#31</span>
+            <span id="servo-last-label"
+                style="font-size: 0.8em; color: #666; min-width: 30px; text-align: left;">#31</span>
         </div>
     </div>
     <br>
